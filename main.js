@@ -1,8 +1,10 @@
 javascript:(function main() {
+    /* --- 脚本面板和样式的唯一ID --- */
     const panelId = 'gemini-mvp-helper';
     const styleId = 'gemini-mvp-helper-styles';
     const existingPanel = document.getElementById(panelId);
 
+    /* --- 如果面板已存在，则移除并退出，实现开关效果 --- */
     if (existingPanel) {
         const existingStyle = document.getElementById(styleId);
         existingPanel.remove();
@@ -12,17 +14,20 @@ javascript:(function main() {
         return;
     }
 
+    /* --- 支持的AI平台配置 --- */
     const AI_PLATFORMS = [
-        {name: 'AIstudio', hostname: 'aistudio.google.com', selector: 'ms-autosize-textarea textarea'},
-        {name: 'Gemini', hostname: 'gemini.google.com', selector: 'rich-textarea .ql-editor[contenteditable="true"]'},
-        {name: 'ChatGPT', hostname: 'chatgpt.com', selector: '#prompt-textarea'},
-        {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input'},
+        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-autosize-textarea textarea', sendButtonSelector: 'button[aria-label="Run"]', stoppableSelector: 'button.run-button.stoppable'},
+        {name: 'Gemini', hostname: 'gemini.google.com', selector: 'rich-textarea .ql-editor[contenteditable="true"]', sendButtonSelector: '[aria-label="Send message"]', stoppableSelector: '[aria-label="Stop generating"]'},
+        {name: 'ChatGPT', hostname: 'chatgpt.com', selector: '#prompt-textarea', sendButtonSelector: 'button[data-testid="send-button"]', stoppableSelector: 'button[aria-label*="Stop"]'},
+        {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input', sendButtonSelector: 'button[class*="send-btn"]', stoppableSelector: 'button[class*="stop-btn"]' /* --- 此为猜测值，可能需要验证 --- */},
     ];
 
+    /* --- 脚本状态变量 --- */
     let activePlatform = null;
     let activeTextarea = null;
     const currentHostname = window.location.hostname + window.location.pathname;
 
+    /* --- 查找当前页面匹配的AI平台和输入框 --- */
     for (const platform of AI_PLATFORMS) {
         if (currentHostname.includes(platform.hostname)) {
             const element = document.querySelector(platform.selector);
@@ -37,7 +42,7 @@ javascript:(function main() {
     /* --- 数据结构升级：将扁平的 prompts 数组升级为带分组的 promptGroups --- */
     let promptGroups = [
         {
-            "name": "分析（混沌）",
+            "name": "分析",
             "prompts": [
                 "给出建议，重点在xx，本次不输出代码。",
                 "从aa,bb的角度，还可以从什么维度进行入手，要求更多的维度",
@@ -51,18 +56,18 @@ javascript:(function main() {
                 "prompt_1",
                 "prompt_2",
                 "prompt_3",
-                "prompt_4",
-                "prompt_5"
+                "prompt_4"
             ]
         },
         {
-            "name": "方案（明确方向）",
+            "name": "方案",
             "prompts": [
                 "当前哪些功能未完成，比如说AI省略的地方，AI说后续完成的地方。",
                 "基于当前代码分析出的尚未完成的重构内容和相关建议，遵循“功能优先、关联聚合、不输出代码”的原则。",
                 "运用最佳实践",
                 "给出技术方案",
-                "本次不输出代码"
+                "本次不输出代码",
+                "本次不输出代码，给出最小侵入的方案。"
             ],
             "itemOrder": [
                 "main_content",
@@ -70,17 +75,19 @@ javascript:(function main() {
                 "prompt_1",
                 "prompt_2",
                 "prompt_3",
-                "prompt_4"
+                "prompt_4",
+                "prompt_5"
             ]
         },
         {
             "name": "文件",
             "prompts": [
                 "将上述功能分为两个阶段，第一个阶段是后端修改，第二个阶段是前端修改，本次输出需要修改哪些文件",
-                "对上述内容进行修改，列出需要修改的文件，同一个文件仅列出一次",
                 "使用方案一，给出详细的技术方案，分成多个阶段进行实现，说明每个阶段实现的逻辑与文件变动情况。",
                 "最终要求达到商用级别",
-                "本次不输出代码"
+                "本次不输出代码",
+                "编写一个python，读取code.txt文件获取代码，代码与之前输出一致，python随后生成对应文件。 python代码不需要含有之前代码内容。 注意生成的文件不要含有代码块字符。",
+                "对上述内容进行修改，列出需要修改的文件，同一个文件仅列出一次，要求最小侵入，仅修改必要部分"
             ],
             "itemOrder": [
                 "main_content",
@@ -88,19 +95,20 @@ javascript:(function main() {
                 "prompt_1",
                 "prompt_2",
                 "prompt_3",
-                "prompt_4"
+                "prompt_4",
+                "prompt_5"
             ]
         },
         {
             "name": "代码",
             "prompts": [
                 "给出第一阶段最终代码，对于没有变化的文件不需要输出。",
-                "给出修复后的最终完整代码，对于没有变化的文件不需要输出。",
                 "强制要求输出完整代码，分多次输出，每次1000行内容，同一个文件放在同一次回复，首次说明分几次",
                 "注释全部使用使用 /* --- xxx--- */",
                 "避免下述问题",
                 "使用中文回复，注释也使用中文",
-                "为了方便替换，给出 xx 的完整最终代码"
+                "为了方便替换，给出 xx 的完整最终代码",
+                "给出修复后的最终完整代码，对于没有变化的文件不需要输出。要求最小侵入，仅修改必要部分"
             ],
             "itemOrder": [
                 "main_content",
@@ -110,7 +118,7 @@ javascript:(function main() {
                 "prompt_3",
                 "prompt_4",
                 "prompt_5",
-                "prompt_6"
+                "prompt_6",
             ]
         },
         {
@@ -145,11 +153,14 @@ javascript:(function main() {
         }
     ];
 
+    /* --- 更多状态变量 --- */
     let activeGroupIndex = 0;
     let originalContent = '';
     let isUpdatingByScript = false;
+    let isAutoContinuing = false;
+    let continueCount = 0;
 
-    /* ---------- Trusted Types 适配：尽量获取/创建可用策略，失败则进入 DOM-only 模式 ---------- */
+    /* --- Trusted Types 适配：尽量获取/创建可用策略，失败则进入 DOM-only 模式 --- */
     let policy = null;
     try {
         if (window.trustedTypes) {
@@ -169,7 +180,7 @@ javascript:(function main() {
                     try {
                         policy = window.trustedTypes.createPolicy(name, {createHTML: (s) => s});
                         break;
-                    } catch (e) { /* 忽略，尝试下一个候选名 */
+                    } catch (e) { /* --- 忽略，尝试下一个候选名 --- */
                     }
                 }
             }
@@ -178,6 +189,7 @@ javascript:(function main() {
         policy = null;
     }
 
+    /* --- 安全地设置HTML内容的函数 --- */
     const setSafeHTML = (element, html) => {
         while (element.firstChild) element.removeChild(element.firstChild);
 
@@ -201,12 +213,14 @@ javascript:(function main() {
         }
     };
 
+    /* --- HTML转义函数 --- */
     const escapeHTML = (str) => {
         const p = document.createElement('p');
         p.textContent = str;
         return p.innerHTML;
     };
 
+    /* --- 截断并转义文本的函数 --- */
     const truncateAndEscapeText = (text, maxLines = 5) => {
         if (text.trim() === '') return '...';
         const lines = text.split('\n');
@@ -214,6 +228,7 @@ javascript:(function main() {
         return escapeHTML(truncatedText);
     };
 
+    /* --- 弹窗函数 --- */
     const showModal = ({title, message, type = 'info', onConfirm, onCancel}) => {
         const existingModal = document.getElementById('gph-modal-overlay');
         if (existingModal) existingModal.remove();
@@ -285,44 +300,68 @@ javascript:(function main() {
         setTimeout(() => okBtn && okBtn.focus(), 50);
     };
 
+    /* --- 如果未找到支持的输入框，则显示错误信息并退出 --- */
     if (!activeTextarea) {
         const tempStyleSheet = document.createElement("style");
         tempStyleSheet.innerText = `
-            .gph-modal-overlay { --bg-primary: #2B2B2B; --bg-secondary: #3C3F41; --text-primary: #fcfcfc; --text-button: #DFDFDF; --text-handle: #6E6E6E; --border-primary: #4E5052; --accent-primary: #3675B4; --accent-secondary: #555555; --accent-delete: #C75450; --accent-success: #6A8759; --shadow-color: rgba(0,0,0,0.7); --overlay-bg: rgba(0,0,0,0.6); }
-            @media (prefers-color-scheme: light) { .gph-modal-overlay { --bg-primary: #FFFFFF; --bg-secondary: #F2F2F2; --text-primary: #000000; --text-button: #FFFFFF; --text-handle: #AAAAAA; --border-primary: #DCDCDC; --accent-primary: #3966B2; --accent-secondary: #8C8C8C; --accent-delete: #DB5860; --accent-success: #34802E; --shadow-color: rgba(0,0,0,0.2); --overlay-bg: rgba(32,33,36,0.5); } }
-            @keyframes gph-fade-in { from { opacity: 0; } to { opacity: 1; } } @keyframes gph-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-            .gph-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: gph-fade-in 0.2s ease-out; font-family: sans-serif; }
-            #gph-modal-container { background: var(--bg-primary); color: var(--text-primary); border-radius: 8px; box-shadow: 0 5px 20px var(--shadow-color); width: 90%; max-width: 400px; animation: gph-slide-up 0.3s ease-out; border-top: 4px solid var(--accent-delete); }
-            #gph-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-primary); } #gph-modal-title { margin: 0; font-size: 16px; font-weight: bold; color: var(--accent-delete); }
-            #gph-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-handle); } #gph-modal-body { padding: 16px; line-height: 1.6; } #gph-modal-body p { margin: 0; }
-            #gph-modal-footer { padding: 12px 16px; background: var(--bg-secondary); display: flex; justify-content: flex-end; gap: 10px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-            .gph-action-btn { background: var(--accent-primary); color: var(--text-button); border: 1px solid var(--accent-primary); border-radius: 4px; padding: 8px 20px; cursor: pointer; font-size: 13px; }`;
+        .gph-modal-overlay { --bg-primary: #2B2B2B; --bg-secondary: #3C3F41; --text-primary: #fcfcfc; --text-button: #DFDFDF; --text-handle: #6E6E6E; --border-primary: #4E5052; --accent-primary: #3675B4; --accent-secondary: #555555; --accent-delete: #C75450; --accent-success: #6A8759; --shadow-color: rgba(0,0,0,0.7); --overlay-bg: rgba(0,0,0,0.6); }
+        @media (prefers-color-scheme: light) { .gph-modal-overlay { --bg-primary: #FFFFFF; --bg-secondary: #F2F2F2; --text-primary: #000000; --text-button: #FFFFFF; --text-handle: #AAAAAA; --border-primary: #DCDCDC; --accent-primary: #3966B2; --accent-secondary: #8C8C8C; --accent-delete: #DB5860; --accent-success: #34802E; --shadow-color: rgba(0,0,0,0.2); --overlay-bg: rgba(32,33,36,0.5); } }
+        @keyframes gph-fade-in { from { opacity: 0; } to { opacity: 1; } } @keyframes gph-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .gph-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: gph-fade-in 0.2s ease-out; font-family: sans-serif; }
+        #gph-modal-container { background: var(--bg-primary); color: var(--text-primary); border-radius: 8px; box-shadow: 0 5px 20px var(--shadow-color); width: 90%; max-width: 400px; animation: gph-slide-up 0.3s ease-out; border-top: 4px solid var(--accent-delete); }
+        #gph-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-primary); } #gph-modal-title { margin: 0; font-size: 16px; font-weight: bold; color: var(--accent-delete); }
+        #gph-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-handle); display: none; }
+        #gph-modal-body { padding: 16px; line-height: 1.6; } #gph-modal-body p { margin: 0; }
+        #gph-modal-footer { padding: 12px 16px; background: var(--bg-secondary); display: none; justify-content: flex-end; gap: 10px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+        .gph-action-btn { background: var(--accent-primary); color: var(--text-button); border: 1px solid var(--accent-primary); border-radius: 4px; padding: 8px 20px; cursor: pointer; font-size: 13px; }`;
         document.head.appendChild(tempStyleSheet);
+
         showModal({
             title: '加载失败',
-            message: '在当前页面未找到支持的AI输入框。脚本无法运行。<br>支持平台: Gemini, ChatGPT, DeepSeek等。',
+            message: '在当前页面未找到支持的AI输入框。脚本无法运行。<br>支持平台: Gemini, ChatGPT, DeepSeek等。<br><br>此窗口将在 <span id="gph-countdown" style="font-weight:bold;">5</span> 秒后自动关闭。',
             type: 'error'
         });
+
+        let secondsLeft = 5;
+        const countdownInterval = setInterval(() => {
+            secondsLeft--;
+            const countdownElement = document.getElementById('gph-countdown');
+            if (countdownElement) {
+                countdownElement.innerText = secondsLeft;
+            }
+            if (secondsLeft <= 0) {
+                clearInterval(countdownInterval);
+            }
+        }, 1000);
+
+        setTimeout(() => {
+            const modalOverlay = document.querySelector('.gph-modal-overlay');
+            if (modalOverlay) {
+                modalOverlay.remove();
+            }
+            clearInterval(countdownInterval);
+        }, 5000);
+
         return;
     }
 
     /* --- CSS 样式：模仿IDEA配色，增加最小侵入性功能 --- */
     const styles = `
-    /* IDEA Darcula-inspired Dark Theme */
+    /* --- IDEA Darcula-inspired Dark Theme --- */
     #gemini-mvp-helper, .gph-modal-overlay { --bg-primary: #2B2B2B; --bg-secondary: #3C3F41; --bg-header: #313335; --bg-input: #2B2B2B; --bg-dragging: #4E5052; --text-primary: #fcfcfc; --text-title: #fcfcfc; --text-button: #DFDFDF; --text-handle: #6E6E6E; --border-primary: #4E5052; --border-input: #555555; --accent-primary: #3675B4; --accent-secondary: #555555; --accent-delete: #C75450; --accent-delete-hover: #D76460; --accent-success: #6A8759; --shadow-color: rgba(0,0,0,0.7); --original-content-bg: rgba(43, 43, 43, 0.7); --original-content-border: #6E6E6E; --overlay-bg: rgba(0,0,0,0.6); }
-    /* IDEA Light Theme */
+    /* --- IDEA Light Theme --- */
     @media (prefers-color-scheme: light) { #gemini-mvp-helper, .gph-modal-overlay { --bg-primary: #FFFFFF; --bg-secondary: #F2F2F2; --bg-header: #EAEAEA; --bg-input: #FFFFFF; --bg-dragging: #D3E5FF; --text-primary: #000000; --text-title: #000000; --text-button: #FFFFFF; --text-handle: #AAAAAA; --border-primary: #DCDCDC; --border-input: #C9C9C9; --accent-primary: #3966B2; --accent-secondary: #8C8C8C; --accent-delete: #DB5860; --accent-delete-hover: #E86971; --accent-success: #34802E; --shadow-color: rgba(0,0,0,0.2); --original-content-bg: #E8F2FE; --original-content-border: #C9C9C9; --overlay-bg: rgba(32,33,36,0.5); } }
     
-    /* Main Panel - Minimal Intrusion */
+    /* --- Main Panel - Minimal Intrusion --- */
     #gemini-mvp-helper { position: fixed; bottom: 20px; right: 20px; width: 500px; background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px; box-shadow: 0 4px 15px var(--shadow-color); z-index: 9999; color: var(--text-primary); font-family: sans-serif; display: flex; flex-direction: column; max-height: 80vh; resize: both; overflow: auto; min-width: 320px; min-height: 150px; opacity: 0.95; transition: opacity 0.2s ease-in-out; }
     #gemini-mvp-helper:hover, #gemini-mvp-helper.dragging-panel { opacity: 1; }
     
-    /* Collapsed State */
+    /* --- Collapsed State --- */
     #gemini-mvp-helper.collapsed { height: auto; max-height: 45px; resize: none; overflow: hidden; }
     #gemini-mvp-helper.collapsed > *:not(#gph-mvp-header) { display: none; }
     #gemini-mvp-helper.collapsed #gph-mvp-toggle-collapse:before { content: '▲'; font-size: 10px; line-height: 14px; }
     
-    /* Header with Controls */
+    /* --- Header with Controls --- */
     #gph-mvp-header { padding: 10px 15px; background: var(--bg-header); cursor: move; user-select: none; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
     #gph-mvp-title { margin: 0; font-size: 14px; font-weight: normal; color: var(--text-title); }
     #gph-header-controls { display: flex; align-items: center; }
@@ -346,11 +385,20 @@ javascript:(function main() {
     .gph-delete-btn:hover { color: var(--accent-delete-hover); }
     #gph-mvp-add-area { padding: 15px; border-top: 1px solid var(--border-primary); background: var(--bg-secondary); display: flex; gap: 10px; flex-shrink: 0; }
     #gph-new-prompt-input { flex-grow: 1; background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); border-radius: 4px; padding: 8px; font-size: 13px; }
-    #gph-mvp-actions { padding: 15px; border-top: 1px solid var(--border-primary); display: flex; justify-content: space-between; gap: 10px; flex-shrink: 0; }
-    .gph-action-btn { background: var(--accent-primary); color: var(--text-button); border: 1px solid var(--accent-primary); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; flex-grow: 1; }
+    #gph-mvp-actions { padding: 15px; border-top: 1px solid var(--border-primary); display: flex; justify-content: space-between; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+    .gph-action-btn { background: var(--accent-primary); color: var(--text-button); border: 1px solid var(--accent-primary); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; flex-grow: 1; white-space: nowrap; }
     .gph-action-btn:hover { filter: brightness(1.1); }
     .gph-secondary-btn { background: var(--accent-secondary); border-color: var(--accent-secondary); }
     
+    /* --- 新增：自动继续输入框和容器样式 --- */
+    #gph-auto-continue-wrapper { display: flex; flex-grow: 1; }
+    #gph-continue-times-input { background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); width: 50px; text-align: center; font-size: 13px; border-radius: 4px 0 0 4px; border-right: none; padding: 6px; }
+    #gph-continue-times-input:focus { outline: none; border-color: var(--accent-primary); }
+    #gph-continue-times-input::-webkit-inner-spin-button, #gph-continue-times-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    #gph-continue-times-input { -moz-appearance: textfield; }
+    #gph-auto-continue-btn { flex-grow: 1; border-radius: 0 4px 4px 0; }
+    #gph-continue-counter { margin-left: 5px; font-weight: bold; }
+
     @keyframes gph-fade-in { from { opacity: 0; } to { opacity: 1; } } @keyframes gph-fade-out { from { opacity: 1; } to { opacity: 0; } } @keyframes gph-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .gph-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: gph-fade-in 0.2s ease-out; }
     .gph-modal-overlay.fade-out { animation: gph-fade-out 0.2s ease-in forwards; }
@@ -364,7 +412,7 @@ javascript:(function main() {
     #gph-modal-footer { padding: 12px 16px; background: var(--bg-secondary); display: flex; justify-content: flex-end; gap: 10px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
     #gph-modal-footer .gph-action-btn { flex-grow: 0; padding: 8px 20px; }`;
 
-    /* --- HTML 结构：增加折叠按钮 --- */
+    /* --- HTML 结构：增加折叠按钮和自动继续按钮 --- */
     const panelHTML = `
         <div id="gph-mvp-header">
             <h3 id="gph-mvp-title">快捷提示词</h3>
@@ -381,8 +429,13 @@ javascript:(function main() {
         <div id="gph-mvp-actions">
              <button id="gph-select-all-btn" class="gph-action-btn gph-secondary-btn">全选/反选</button>
              <button id="gph-copy-btn" class="gph-action-btn">复制代码</button>
+             <div id="gph-auto-continue-wrapper">
+                <input type="number" id="gph-continue-times-input" value="5" min="1" max="99" title="自动继续次数">
+                <button id="gph-auto-continue-btn" class="gph-action-btn gph-secondary-btn">自动继续<span id="gph-continue-counter"></span></button>
+             </div>
         </div>`;
 
+    /* --- 注入样式和HTML到页面 --- */
     const styleSheet = document.createElement("style");
     styleSheet.id = styleId;
     styleSheet.innerText = styles;
@@ -393,6 +446,7 @@ javascript:(function main() {
     setSafeHTML(panel, panelHTML);
     document.body.appendChild(panel);
 
+    /* --- 获取DOM元素引用 --- */
     const tabContainer = document.getElementById('gph-mvp-tabs');
     const promptList = document.getElementById('gph-mvp-list');
     const newPromptInput = document.getElementById('gph-new-prompt-input');
@@ -402,6 +456,7 @@ javascript:(function main() {
     if (titleEl) titleEl.textContent = `快捷提示词 (${activePlatform.name})`;
     if (collapseBtn) collapseBtn.addEventListener('click', () => panel.classList.toggle('collapsed'));
 
+    /* --- 跨平台输入框内容获取函数 --- */
     const getInputValue = (element) => {
         if (!element) return '';
         if (element.isContentEditable) {
@@ -410,6 +465,7 @@ javascript:(function main() {
         return element.value || element.textContent;
     };
 
+    /* --- 跨平台输入框内容设置函数 --- */
     const setInputValue = (element, value) => {
         if (!element) return;
         if (element.isContentEditable) {
@@ -501,6 +557,7 @@ javascript:(function main() {
         renderPromptsForActiveGroup(preserveChecks);
     };
 
+    /* --- 添加新提示词的函数 --- */
     const addNewPrompt = () => {
         const text = newPromptInput.value.trim();
         if (text) {
@@ -513,6 +570,7 @@ javascript:(function main() {
         }
     };
 
+    /* --- 删除提示词的函数 --- */
     const deletePrompt = (idToDelete) => {
         const activeGroup = promptGroups[activeGroupIndex];
 
@@ -541,6 +599,7 @@ javascript:(function main() {
         updateActiveTextarea();
     };
 
+    /* --- 全选/反选函数 --- */
     const toggleSelectAll = () => {
         const checkboxes = promptList.querySelectorAll('input[type="checkbox"]');
         if (checkboxes.length === 0) return;
@@ -562,6 +621,67 @@ javascript:(function main() {
         });
     };
 
+    /* --- 自动继续功能核心逻辑 --- */
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const stopAutoContinue = () => {
+        isAutoContinuing = false;
+        continueCount = 0;
+        const continueBtn = document.getElementById('gph-auto-continue-btn');
+        const counterSpan = document.getElementById('gph-continue-counter');
+        if (continueBtn) continueBtn.firstChild.textContent = '自动继续'; /* --- 只修改文本节点 --- */
+        if (counterSpan) counterSpan.textContent = '';
+        console.log('自动继续任务已停止。');
+    };
+
+    async function startAutoContinue() {
+        const continueBtn = document.getElementById('gph-auto-continue-btn');
+        const counterSpan = document.getElementById('gph-continue-counter');
+
+        while (continueCount > 0 && isAutoContinuing) {
+            continueBtn.firstChild.textContent = '停止';
+            counterSpan.textContent = `(${continueCount})`;
+
+            console.log('等待AI开始生成...');
+            let stoppableButton = document.querySelector(activePlatform.stoppableSelector);
+            while (!stoppableButton && isAutoContinuing) {
+                await sleep(500);
+                stoppableButton = document.querySelector(activePlatform.stoppableSelector);
+            }
+            if (!isAutoContinuing) break;
+
+            console.log('AI正在生成，等待结束...');
+            while (document.querySelector(activePlatform.stoppableSelector) && isAutoContinuing) {
+                await sleep(500);
+            }
+            if (!isAutoContinuing) break;
+
+            console.log('AI生成结束。');
+
+            await sleep(1000);
+            const sendButton = document.querySelector(activePlatform.sendButtonSelector);
+            if (!sendButton) {
+                console.error('未找到发送按钮，停止任务。');
+                showModal({title: '错误', message: '找不到发送按钮，自动继续已停止。', type: 'error'});
+                break;
+            }
+
+            while ((sendButton.disabled || sendButton.getAttribute('aria-disabled') === 'true') && isAutoContinuing) {
+                setInputValue(activeTextarea, '继续');
+                console.log('执行“继续”操作...');
+                await sleep(500);
+            }
+            if (!isAutoContinuing) break;
+
+            sendButton.click();
+
+            continueCount--;
+        }
+
+        stopAutoContinue();
+    }
+
+    /* --- 面板拖拽逻辑 --- */
     const header = document.getElementById('gph-mvp-header');
     let isDraggingPanel = false, offsetX, offsetY;
     header.addEventListener('mousedown', (e) => {
@@ -582,6 +702,7 @@ javascript:(function main() {
         document.body.style.cursor = 'default';
     });
 
+    /* --- 提示词拖拽排序逻辑 --- */
     let draggedItem = null;
     promptList.addEventListener('dragstart', (e) => {
         const item = e.target.closest('li[draggable="true"]');
@@ -610,8 +731,11 @@ javascript:(function main() {
         }
     });
 
+    /* --- 面板内所有点击事件的统一处理器 --- */
     panel.addEventListener('click', (e) => {
-        const target = e.target;
+        const target = e.target.closest('button');
+        if (!target) return;
+
         if (target.id === 'gph-add-prompt-btn') addNewPrompt();
         else if (target.classList.contains('gph-delete-btn')) {
             showModal({
@@ -620,6 +744,26 @@ javascript:(function main() {
             });
         } else if (target.id === 'gph-select-all-btn') toggleSelectAll();
         else if (target.id === 'gph-copy-btn') copyBookmarkletCode();
+        else if (target.id === 'gph-auto-continue-btn') {
+            if (isAutoContinuing) {
+                stopAutoContinue();
+            } else {
+                const timesInput = document.getElementById('gph-continue-times-input');
+                const times = timesInput ? timesInput.value : '0';
+                const num = parseInt(times, 10);
+
+                if (num && num > 0) {
+                    continueCount = num;
+                    isAutoContinuing = true;
+                    showModal({
+                        title: '任务准备就绪',
+                        message: `请手动发送您的初始请求。脚本将在AI开始生成后接管，并自动继续 ${num} 次。`,
+                        type: 'info'
+                    });
+                    startAutoContinue();
+                }
+            }
+        }
     });
 
     /* --- 事件监听：增加标签页点击事件 --- */
@@ -632,10 +776,12 @@ javascript:(function main() {
         }
     });
 
+    /* --- 监听提示词列表的复选框变化 --- */
     promptList.addEventListener('change', (e) => {
         if (e.target.type === 'checkbox') updateActiveTextarea();
     });
 
+    /* --- 监听新提示词输入框的回车事件 --- */
     newPromptInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -667,6 +813,7 @@ javascript:(function main() {
         }
     };
 
+    /* --- 确保输入框绑定，处理SPA页面切换输入框实例的情况 --- */
     const ensureTextareaBinding = () => {
         if (activeTextarea && document.body.contains(activeTextarea)) {
             return;
@@ -692,11 +839,14 @@ javascript:(function main() {
 
     /* --- 初始化：为每个分组生成 itemOrder --- */
     promptGroups.forEach(group => {
-        group.itemOrder = [];
-        group.itemOrder.push('main_content');
-        group.prompts.forEach((_, index) => group.itemOrder.push(`prompt_${index}`));
+        if (!group.itemOrder || group.itemOrder.length === 0) {
+            group.itemOrder = [];
+            group.itemOrder.push('main_content');
+            group.prompts.forEach((_, index) => group.itemOrder.push(`prompt_${index}`));
+        }
     });
 
+    /* --- 初始绑定和渲染 --- */
     activeTextarea.addEventListener('input', syncInputToState);
     activeTextarea.addEventListener('blur', syncInputToState);
 
