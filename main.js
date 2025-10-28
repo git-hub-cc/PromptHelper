@@ -14,6 +14,10 @@ javascript:(function main() {
         return;
     }
 
+    /* --- 本地存储KEY --- */
+    const STORAGE_KEY_PROMPTS = 'gph_promptGroups_v2';
+    const STORAGE_KEY_PANEL_STATE = 'gph_panelState_v1';
+
     /* --- 支持的AI平台配置 --- */
     const AI_PLATFORMS = [
         {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-autosize-textarea textarea', sendButtonSelector: 'button[aria-label="Run"]', stoppableSelector: 'button.run-button.stoppable'},
@@ -39,45 +43,41 @@ javascript:(function main() {
         }
     }
 
-    /* --- 数据结构升级：将扁平的 prompts 数组升级为带分组的 promptGroups --- */
-    let promptGroups = [
+    /* --- 默认数据结构：仅在localStorage为空时使用 --- */
+    const DEFAULT_PROMPT_GROUPS = [
         {
             "name": "分析",
             "prompts": [
-                "给出建议，重点在xx，本次不输出代码。",
-                "从aa,bb的角度，还可以从什么维度进行入手，要求更多的维度",
-                "实现原理参考下面内容",
-                "中文回复，使用中文注释",
-                "本次不输出代码"
+                "你是一位资深的 [领域，如：商业、技术、市场] 分析师，请以专业、客观、严谨的视角完成本次任务。",
+                "请对以下核心内容进行深入、全面的分析。",
+                "请从多个维度进行分析，例如：[维度A], [维度B], [维度C]，并尽可能拓展更多创新性视角。",
+                "请进行SWOT分析（优势、劣势、机会、威胁）。",
+                "请对比分析 [方案A] 和 [方案B] 的优缺点、成本效益和潜在风险。",
+                "请基于以下背景信息或参考材料进行分析：",
+                "本次分析的核心目标是 [具体目标，如：找出潜在风险、评估可行性、提出优化策略]。",
+                "请遵循以下格式和结构输出你的回答：\n1. 核心摘要 (Executive Summary)\n2. 分点详细论述 (Detailed Analysis)\n3. 结论与建议 (Conclusion & Recommendations)",
+                "请以Markdown的表格形式进行总结。",
+                "请使用中文进行回复。如果包含专业术语，请附上简要解释。",
+                "本次任务专注于理论和策略，禁止输出任何代码块。",
+                "请保持客观中立，论证需有事实或逻辑支撑，避免主观臆断。",
+                "分析的深度应触及问题的本质，避免泛泛而谈。",
+                "在分析的最后，请提出3个开放性问题以引导下一步的思考。"
             ],
             "itemOrder": [
-                "main_content",
-                "prompt_0",
-                "prompt_1",
-                "prompt_2",
-                "prompt_3",
-                "prompt_4"
+                "main_content", "prompt_0", "prompt_1", "prompt_6", "prompt_2", "prompt_3", "prompt_4", "prompt_5", "prompt_12", "prompt_11", "prompt_7", "prompt_8", "prompt_9", "prompt_10", "prompt_13"
             ]
         },
         {
             "name": "方案",
             "prompts": [
-                "当前哪些功能未完成，比如说AI省略的地方，AI说后续完成的地方。",
+                "请分析代码，并识别出所有未完成的功能、TODO注释以及代码中提及的“后续实现”部分。",
                 "基于当前代码分析出的尚未完成的重构内容和相关建议，遵循“功能优先、关联聚合、不输出代码”的原则。",
+                "请识别出代码中急需重构的部分。针对每一部分，提出具体的重构建议，并说明其必要性（例如：提升可维护性、降低耦合度）。",
+                "请评估并提出多种方案（例如：最小侵入的临时方案、彻底重构的长期方案），并以表格形式对比它们的优缺点、实施成本和潜在风险。",
                 "运用最佳实践",
-                "给出技术方案",
-                "本次不输出代码",
                 "本次不输出代码，给出最小侵入的方案。"
             ],
-            "itemOrder": [
-                "main_content",
-                "prompt_0",
-                "prompt_1",
-                "prompt_2",
-                "prompt_3",
-                "prompt_4",
-                "prompt_5"
-            ]
+            "itemOrder": [ "main_content", "prompt_0", "prompt_1", "prompt_2", "prompt_3", "prompt_4", "prompt_5" ]
         },
         {
             "name": "文件",
@@ -85,73 +85,85 @@ javascript:(function main() {
                 "将上述功能分为两个阶段，第一个阶段是后端修改，第二个阶段是前端修改，本次输出需要修改哪些文件",
                 "使用方案一，给出详细的技术方案，分成多个阶段进行实现，说明每个阶段实现的逻辑与文件变动情况。",
                 "最终要求达到商用级别",
-                "本次不输出代码",
-                "编写一个python，读取code.txt文件获取代码，代码与之前输出一致，python随后生成对应文件。 python代码不需要含有之前代码内容。 注意生成的文件不要含有代码块字符。",
-                "对上述内容进行修改，列出需要修改的文件，同一个文件仅列出一次，要求最小侵入，仅修改必要部分"
+                "本次不输出代码,对上述内容进行修改，列出需要修改的文件，同一个文件仅列出一次，要求最小侵入，仅修改必要部分",
             ],
-            "itemOrder": [
-                "main_content",
-                "prompt_0",
-                "prompt_1",
-                "prompt_2",
-                "prompt_3",
-                "prompt_4",
-                "prompt_5"
-            ]
+            "itemOrder": [ "main_content", "prompt_0", "prompt_1", "prompt_2", "prompt_3" ]
         },
         {
             "name": "代码",
             "prompts": [
-                "给出第一阶段最终代码，对于没有变化的文件不需要输出。",
                 "强制要求输出完整代码，分多次输出，每次1000行内容，同一个文件放在同一次回复，首次说明分几次",
+                "给出修复后的最终完整代码，对于没有变化的文件不需要输出。要求最小侵入，仅修改必要部分",
+                "请编写一个Python脚本。该脚本的功能是：\n1. 读取名为 'input_content.txt' 的文件。\n2. 将读取的内容填充到预设的文件结构中。\n3. 在当前目录下生成对应的文件和文件夹。\n4. 脚本本身不应包含 'input_content.txt' 的内容，而是动态读取。\n5. 生成的文件内容不应被Markdown代码块（```）包裹。",
                 "注释全部使用使用 /* --- xxx--- */",
-                "避免下述问题",
-                "使用中文回复，注释也使用中文",
-                "为了方便替换，给出 xx 的完整最终代码",
-                "给出修复后的最终完整代码，对于没有变化的文件不需要输出。要求最小侵入，仅修改必要部分"
+                "在编码时，请严格避免以下问题/模式：[在此处列出要避免的具体问题，例如：使用全局变量、循环导入等]。",
+                "遵循行业最佳实践（如SOLID, DRY）编写代码",
+                "请使用中文进行回复，并且代码中的所有注释也必须使用中文。",
             ],
-            "itemOrder": [
-                "main_content",
-                "prompt_0",
-                "prompt_1",
-                "prompt_2",
-                "prompt_3",
-                "prompt_4",
-                "prompt_5",
-                "prompt_6",
-            ]
+            "itemOrder": [ "main_content", "prompt_0", "prompt_1", "prompt_2", "prompt_3", "prompt_4", "prompt_5", "prompt_6" ]
         },
         {
-            "name": "bug",
+            "name": "Bug",
             "prompts": [
+                "请基于以下问题描述、错误日志和相关代码，进行一次彻底的根本原因分析 (Root Cause Analysis, RCA)。",
                 "分析出原因是什么，这是一个极其复杂的问题，一步步分析后给出解决方案，本次不输出代码。",
-                "中文回复"
+                "本次任务专注于分析和策略，严禁输出完整的、可直接运行的代码。可以使用少量伪代码来阐明核心逻辑。",
+                "请提出至少两种解决方案（例如，一个临时修复 Quick Fix 和一个长期重构方案 Long-term Fix），并以表格形式对比它们的优缺点、风险和实施成本。",
+                "请使用专业、清晰的中文进行回复。"
             ],
-            "itemOrder": [
-                "main_content",
-                "prompt_0",
-                "prompt_1"
-            ]
+            "itemOrder": [ "main_content", "prompt_0", "prompt_1", "prompt_2", "prompt_3", "prompt_4" ]
         },
         {
             "name": "优化",
             "prompts": [
-                "重写了配色方案",
-                "分析代码，给出建议",
-                "当前哪些功能未完成，列出来。",
-                "当前存在哪些问题，列出来。",
-                "根据项目内容，接下来应该开发什么功能。"
+                "你是一位首席软件工程师和系统架构师，擅长代码审计、性能调优和产品策略分析。",
+                "请对提供的代码库进行一次全面的审查，并从多个维度提出具体的优化建议。",
+                "代码质量与可维护性: 识别代码异味（Code Smells）、重复代码（DRY原则）和过于复杂的函数。提出重构建议以提升代码的可读性和可维护性。",
+                "性能瓶颈分析: 找出潜在的性能瓶颈，例如低效的算法、不当的数据库查询或内存泄漏风险，并提出优化方案。",
+                "架构与设计模式: 评估项目的整体架构。指出不合理的设计、高耦合的模块，并建议更优的设计模式或架构方案以提高系统的可扩展性。",
+                "技术债与未完成项: 扫描代码中的 `TODO`, `FIXME` 注释或明显的未完成逻辑，将其整理成一个清晰的技术债列表。",
+                "用户体验 (UI/UX) 优化: 基于现有功能，从用户交互和界面设计的角度提出改进建议，例如简化操作流程、改善布局或提升可访问性。",
+                "产品路线图建议: 根据项目当前的功能和目标，提出 3-5 个接下来最有价值开发的新功能，并说明它们为什么重要（例如：完善核心体验、吸引新用户）。",
+                "请将所有发现的问题和建议整合到一个结构化的报告中。使用Markdown格式，并为每个条目评估其 优先级（高/中/低） 和 预估工作量（大/中/小）。",
+                "本次审查专注于分析和建议，请不要输出任何修改后的代码块。",
+                "请使用专业、客观且具有建设性的语言进行回复。"
             ],
             "itemOrder": [
-                "main_content",
-                "prompt_0",
-                "prompt_1",
-                "prompt_2",
-                "prompt_3",
-                "prompt_4"
+                "main_content", "prompt_0", "prompt_1", "prompt_2", "prompt_3", "prompt_4", "prompt_5", "prompt_6", "prompt_7", "prompt_8", "prompt_9", "prompt_10"
             ]
         }
     ];
+
+    /* --- 数据持久化函数 --- */
+    const savePromptGroups = (data) => {
+        try {
+            localStorage.setItem(STORAGE_KEY_PROMPTS, JSON.stringify(data));
+        } catch (e) {
+            console.error("GPH Error: Failed to save prompts.", e);
+        }
+    };
+
+    const loadPromptGroups = () => {
+        try {
+            const storedData = localStorage.getItem(STORAGE_KEY_PROMPTS);
+            if (storedData) {
+                const parsedData = JSON.parse(storedData);
+                /* --- 确保每个组都有 itemOrder --- */
+                parsedData.forEach(group => {
+                    if (!group.itemOrder || !Array.isArray(group.itemOrder)) {
+                        group.itemOrder = ['main_content', ...group.prompts.map((_, i) => `prompt_${i}`)];
+                    }
+                });
+                return parsedData;
+            }
+        } catch (e) {
+            console.error("GPH Error: Failed to load prompts from storage.", e);
+        }
+        return JSON.parse(JSON.stringify(DEFAULT_PROMPT_GROUPS)); /* --- 返回深拷贝的默认值 --- */
+    };
+
+    /* --- 加载提示词数据 --- */
+    let promptGroups = loadPromptGroups();
 
     /* --- 更多状态变量 --- */
     let activeGroupIndex = 0;
@@ -412,7 +424,7 @@ javascript:(function main() {
     #gph-modal-footer { padding: 12px 16px; background: var(--bg-secondary); display: flex; justify-content: flex-end; gap: 10px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
     #gph-modal-footer .gph-action-btn { flex-grow: 0; padding: 8px 20px; }`;
 
-    /* --- HTML 结构：增加折叠按钮和自动继续按钮 --- */
+    /* --- HTML 结构：增加重置按钮 --- */
     const panelHTML = `
         <div id="gph-mvp-header">
             <h3 id="gph-mvp-title">快捷提示词</h3>
@@ -427,7 +439,7 @@ javascript:(function main() {
             <button id="gph-add-prompt-btn" class="gph-action-btn">+</button>
         </div>
         <div id="gph-mvp-actions">
-             <button id="gph-select-all-btn" class="gph-action-btn gph-secondary-btn">全选/反选</button>
+             <button id="gph-reset-btn" class="gph-action-btn gph-secondary-btn" title="恢复到初始默认提示词">重置</button>
              <button id="gph-copy-btn" class="gph-action-btn">复制代码</button>
              <div id="gph-auto-continue-wrapper">
                 <input type="number" id="gph-continue-times-input" value="5" min="1" max="99" title="自动继续次数">
@@ -445,6 +457,38 @@ javascript:(function main() {
     panel.id = panelId;
     setSafeHTML(panel, panelHTML);
     document.body.appendChild(panel);
+
+    /* --- 面板状态持久化函数 --- */
+    const savePanelState = () => {
+        try {
+            const state = {
+                left: panel.style.left,
+                top: panel.style.top,
+                width: panel.style.width,
+                height: panel.style.height,
+            };
+            localStorage.setItem(STORAGE_KEY_PANEL_STATE, JSON.stringify(state));
+        } catch (e) {
+            console.error("GPH Error: Failed to save panel state.", e);
+        }
+    };
+
+    const loadPanelState = () => {
+        try {
+            const state = JSON.parse(localStorage.getItem(STORAGE_KEY_PANEL_STATE));
+            if (state) {
+                if(state.left) panel.style.left = state.left;
+                if(state.top) panel.style.top = state.top;
+                if(state.width) panel.style.width = state.width;
+                if(state.height) panel.style.height = state.height;
+            }
+        } catch (e) {
+            /* --- 忽略错误，使用默认位置 --- */
+        }
+    };
+
+    /* --- 应用已保存的面板状态 --- */
+    loadPanelState();
 
     /* --- 获取DOM元素引用 --- */
     const tabContainer = document.getElementById('gph-mvp-tabs');
@@ -567,6 +611,8 @@ javascript:(function main() {
             newPromptInput.value = '';
             renderPromptsForActiveGroup(true);
             updateActiveTextarea();
+            savePromptGroups(promptGroups);
+            newPromptInput.focus(); /* --- UX优化：添加后自动聚焦 --- */
         }
     };
 
@@ -597,22 +643,16 @@ javascript:(function main() {
 
         renderPromptsForActiveGroup(true);
         updateActiveTextarea();
+        savePromptGroups(promptGroups);
     };
 
-    /* --- 全选/反选函数 --- */
-    const toggleSelectAll = () => {
-        const checkboxes = promptList.querySelectorAll('input[type="checkbox"]');
-        if (checkboxes.length === 0) return;
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        checkboxes.forEach(cb => cb.checked = !allChecked);
-        updateActiveTextarea();
-    };
+    /* --- 全选/反选函数（移到面板点击事件处理器中）--- */
 
     /* --- 适配函数：复制书签代码时序列化整个 promptGroups --- */
     const copyBookmarkletCode = () => {
         const updatedSource = main.toString().replace(
-            /let promptGroups = \[[\s\S]*?\];/,
-            `let promptGroups = ${JSON.stringify(promptGroups, null, 4)};`
+            /const DEFAULT_PROMPT_GROUPS = \[[\s\S]*?\];/,
+            `const DEFAULT_PROMPT_GROUPS = ${JSON.stringify(promptGroups, null, 4)};`
         );
         navigator.clipboard.writeText(`javascript:(${updatedSource})()`).then(() => {
             showModal({title: '操作成功', message: '新版书签代码已复制到剪贴板！', type: 'success'});
@@ -697,10 +737,18 @@ javascript:(function main() {
         panel.style.top = `${e.clientY - offsetY}px`;
     });
     document.addEventListener('mouseup', () => {
-        isDraggingPanel = false;
-        panel.classList.remove('dragging-panel');
-        document.body.style.cursor = 'default';
+        if (isDraggingPanel) {
+            isDraggingPanel = false;
+            panel.classList.remove('dragging-panel');
+            document.body.style.cursor = 'default';
+            savePanelState(); /* --- 保存位置 --- */
+        }
     });
+
+    /* --- 监听面板大小变化 --- */
+    if (window.ResizeObserver) {
+        new ResizeObserver(savePanelState).observe(panel);
+    }
 
     /* --- 提示词拖拽排序逻辑 --- */
     let draggedItem = null;
@@ -728,6 +776,7 @@ javascript:(function main() {
             activeGroup.itemOrder = Array.from(promptList.querySelectorAll('li')).map(li => li.dataset.id);
             renderPromptsForActiveGroup(true);
             updateActiveTextarea();
+            savePromptGroups(promptGroups); /* --- 保存排序 --- */
         }
     });
 
@@ -742,7 +791,17 @@ javascript:(function main() {
                 title: '请确认', message: '您确定要永久删除这条提示词吗？', type: 'confirm',
                 onConfirm: () => deletePrompt(target.closest('li').dataset.id)
             });
-        } else if (target.id === 'gph-select-all-btn') toggleSelectAll();
+        } else if (target.id === 'gph-reset-btn') {
+            showModal({
+                title: '请确认', message: '此操作将清除所有自定义提示词，并恢复到初始默认设置。确定要继续吗？', type: 'confirm',
+                onConfirm: () => {
+                    localStorage.removeItem(STORAGE_KEY_PROMPTS);
+                    promptGroups = loadPromptGroups(); /* --- 重新加载默认值 --- */
+                    renderUI();
+                    updateActiveTextarea();
+                }
+            });
+        }
         else if (target.id === 'gph-copy-btn') copyBookmarkletCode();
         else if (target.id === 'gph-auto-continue-btn') {
             if (isAutoContinuing) {
@@ -837,14 +896,7 @@ javascript:(function main() {
         }
     };
 
-    /* --- 初始化：为每个分组生成 itemOrder --- */
-    promptGroups.forEach(group => {
-        if (!group.itemOrder || group.itemOrder.length === 0) {
-            group.itemOrder = [];
-            group.itemOrder.push('main_content');
-            group.prompts.forEach((_, index) => group.itemOrder.push(`prompt_${index}`));
-        }
-    });
+    /* --- 初始化：为每个分组生成 itemOrder (已移至加载函数中) --- */
 
     /* --- 初始绑定和渲染 --- */
     activeTextarea.addEventListener('input', syncInputToState);
