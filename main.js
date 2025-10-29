@@ -18,12 +18,12 @@ javascript:(function main() {
     const STORAGE_KEY_PROMPTS = 'gph_promptGroups_v2';
     const STORAGE_KEY_PANEL_STATE = 'gph_panelState_v1';
 
-    /* --- 支持的AI平台配置 --- */
+    /* --- 支持的AI平台配置 (已添加 scrollContainerSelector) --- */
     const AI_PLATFORMS = [
-        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-autosize-textarea textarea', sendButtonSelector: 'button[aria-label="Run"]', stoppableSelector: 'button.run-button.stoppable'},
-        {name: 'Gemini', hostname: 'gemini.google.com', selector: 'rich-textarea .ql-editor[contenteditable="true"]', sendButtonSelector: '[aria-label="Send message"]', stoppableSelector: '[aria-label="Stop generating"]'},
-        {name: 'ChatGPT', hostname: 'chatgpt.com', selector: '#prompt-textarea', sendButtonSelector: 'button[data-testid="send-button"]', stoppableSelector: 'button[aria-label*="Stop"]'},
-        {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input', sendButtonSelector: 'button[class*="send-btn"]', stoppableSelector: 'button[class*="stop-btn"]' /* --- 此为猜测值，可能需要验证 --- */},
+        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-autosize-textarea textarea', sendButtonSelector: 'button[aria-label="Run"]', stoppableSelector: 'button.run-button.stoppable', scrollContainerSelector: 'ms-autoscroll-container'},
+        {name: 'Gemini', hostname: 'gemini.google.com', selector: 'rich-textarea .ql-editor[contenteditable="true"]', sendButtonSelector: '[aria-label="Send message"]', stoppableSelector: '[aria-label="Stop generating"]', scrollContainerSelector: 'ms-autoscroll-container'},
+        {name: 'ChatGPT', hostname: 'chatgpt.com', selector: '#prompt-textarea', sendButtonSelector: 'button[data-testid="send-button"]', stoppableSelector: 'button[aria-label*="Stop"]', scrollContainerSelector: 'main .overflow-y-auto'},
+        {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input', sendButtonSelector: 'button[class*="send-btn"]', stoppableSelector: 'button[class*="stop-btn"]', scrollContainerSelector: 'div.custom-scroll-container'},
     ];
 
     /* --- 脚本状态变量 --- */
@@ -664,6 +664,26 @@ javascript:(function main() {
     /* --- 自动继续功能核心逻辑 --- */
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    /**
+     * 新增：平滑滚动到聊天窗口底部的函数
+     */
+    const scrollToBottom = () => {
+        if (!activePlatform || !activePlatform.scrollContainerSelector) {
+            console.warn('GPH Warn: 当前平台未配置滚动容器选择器。');
+            return;
+        }
+
+        const container = document.querySelector(activePlatform.scrollContainerSelector);
+        if (container) {
+            container.scrollTo({
+                top: container.scrollHeight,
+                behavior: 'smooth'
+            });
+        } else {
+            console.warn(`GPH Warn: 未找到滚动容器: "${activePlatform.scrollContainerSelector}"`);
+        }
+    };
+
     const stopAutoContinue = () => {
         isAutoContinuing = false;
         continueCount = 0;
@@ -709,6 +729,9 @@ javascript:(function main() {
             while ((sendButton.disabled || sendButton.getAttribute('aria-disabled') === 'true') && isAutoContinuing) {
                 setInputValue(activeTextarea, '继续');
                 console.log('执行“继续”操作...');
+
+                scrollToBottom();
+
                 await sleep(500);
             }
             if (!isAutoContinuing) break;
