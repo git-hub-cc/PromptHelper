@@ -484,7 +484,7 @@ javascript:(function main() {
 
                 const textarea = getActiveTextarea();
                 if (!textarea) {
-                    showModal({ title: '错误', contentHTML: '<p>无法找到AI输入框，请刷新页面或在新会话中重试。</p>', showCancel: false, confirmText: '关闭' });
+                    showModal({ title: '错误', contentHTML: '<p>无法找到AI输入框，请刷新页面或在新会话中重试。</p>', showCancel: false, confirmText: '关闭', onConfirm: (modal, closeModal) => closeModal()  });
                     return;
                 }
                 setInputValue(textarea, finalPrompt + domain);
@@ -518,7 +518,7 @@ javascript:(function main() {
                 closeModal();
 
                 if (!jsonString) {
-                    showModal({ title: '提取失败', contentHTML: `<p>未能在您粘贴的文本中找到有效的JSON代码块 (以 \`\`\`json 开头或直接以 { 开头)。</p>`, showCancel: false, confirmText: '关闭' });
+                    showModal({ title: '提取失败', contentHTML: `<p>未能在您粘贴的文本中找到有效的JSON代码块 (以 \`\`\`json 开头或直接以 { 开头)。</p>`, showCancel: false, confirmText: '关闭' , onConfirm: (modal, closeModal) => closeModal() });
                     return;
                 }
 
@@ -533,9 +533,9 @@ javascript:(function main() {
                     activeRoleIndex = 0;
                     saveFrameworks(frameworks);
                     renderUI();
-                    showModal({ title: '成功', contentHTML: `<p>成功创建了新的 <strong>${escapeHTML(newFrameworkData.name)}</strong> 框架！</p>`, showCancel: false, confirmText: '好的' });
+                    showModal({ title: '成功', contentHTML: `<p>成功创建了新的 <strong>${escapeHTML(newFrameworkData.name)}</strong> 框架！</p>`, showCancel: false, confirmText: '好的', onConfirm: (modal, closeModal) => closeModal() });
                 } catch (error) {
-                    showModal({ title: '解析失败', contentHTML: `<p>无法解析提取出的JSON内容。请检查其格式是否正确。</p><p><strong>错误信息:</strong> ${escapeHTML(error.message)}</p>`, showCancel: false, confirmText: '关闭' });
+                    showModal({ title: '解析失败', contentHTML: `<p>无法解析提取出的JSON内容。请检查其格式是否正确。</p><p><strong>错误信息:</strong> ${escapeHTML(error.message)}</p>`, showCancel: false, confirmText: '关闭', onConfirm: (modal, closeModal) => closeModal()  });
                 }
             }
         });
@@ -718,7 +718,7 @@ javascript:(function main() {
                 saveFrameworks(frameworks);
                 renderUI();
                 closeModal();
-                showModal({ title: '成功', contentHTML: `<p>框架 <strong>${escapeHTML(newFramework.name)}</strong> 已成功更新！</p>`, showCancel: false, confirmText: '好的' });
+                showModal({ title: '成功', contentHTML: `<p>框架 <strong>${escapeHTML(newFramework.name)}</strong> 已成功更新！</p>`, showCancel: false, confirmText: '好的', onConfirm: (modal, closeModal) => closeModal()  });
             }
         });
 
@@ -789,7 +789,7 @@ javascript:(function main() {
 
         const textarea = getActiveTextarea();
         if (!textarea) {
-            showModal({ title: '错误', contentHTML: '<p>无法找到AI输入框，请刷新页面或在新会话中重试。</p>', showCancel: false, confirmText: '关闭' });
+            showModal({ title: '错误', contentHTML: '<p>无法找到AI输入框，请刷新页面或在新会话中重试。</p>', showCancel: false, confirmText: '关闭' , onConfirm: (modal, closeModal) => closeModal() });
             return;
         }
 
@@ -935,7 +935,7 @@ javascript:(function main() {
 
             const textarea = getActiveTextarea();
             if (!textarea) {
-                showModal({ title: '错误', contentHTML: '<p>在自动继续期间找不到输入框，任务已中止。</p>', showCancel: false, confirmText: '关闭' });
+                showModal({ title: '错误', contentHTML: '<p>在自动继续期间找不到输入框，任务已中止。</p>', showCancel: false, confirmText: '关闭', onConfirm: (modal, closeModal) => closeModal()  });
                 stopAutoContinue();
                 return;
             }
@@ -955,7 +955,7 @@ javascript:(function main() {
 
                 if (attempts >= maxAttempts) {
                     console.error('GPH Error: 发送按钮长时间未启用或未找到，自动继续任务中止。');
-                    showModal({ title: '错误', contentHTML: '<p>发送按钮长时间未启用或未找到，自动继续任务已中止。请检查页面状态。</p>', showCancel: false, confirmText: '关闭' });
+                    showModal({ title: '错误', contentHTML: '<p>发送按钮长时间未启用或未找到，自动继续任务已中止。请检查页面状态。</p>', showCancel: false, confirmText: '关闭', onConfirm: (modal, closeModal) => closeModal()  });
                     stopAutoContinue();
                     return;
                 }
