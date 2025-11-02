@@ -15,7 +15,7 @@ javascript:(function main() {
     }
 
     /* --- 本地存储KEY --- */
-    const STORAGE_KEY_FRAMEWORKS = 'gph_roleFrameworks_v1';
+    const STORAGE_KEY_FRAMEWORKS = 'gph_roleFrameworks_v2';
     const STORAGE_KEY_PANEL_STATE = 'gph_panelState_v1';
 
     /* --- AI平台配置 (已集成自动继续所需的选择器) --- */
@@ -26,7 +26,7 @@ javascript:(function main() {
         {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input', sendButtonSelector: 'button[class*="send-btn"]', stoppableSelector: 'button[class*="stop-btn"]', scrollContainerSelector: 'div.custom-scroll-container'},
     ];
 
-    /* --- 元提示词模板：要求AI直接输出JSON --- */
+    /* --- 元提示词模板：要求AI直接输出JSON (v2.1: 支持自定义数量) --- */
     const META_PROMPT_TEMPLATE = `
 #### **你的身份**
 你是一位顶级的提示词工程师（Prompt Engineering Architect），同时也是一个精准的JSON格式化工具。你的任务是根据我提供的一个特定【领域/主题】，设计一个全面、结构化、多角色的AI助手提示词框架，并**直接以一个完整的JSON对象格式**输出。禁止在JSON代码块前后添加任何解释性文字、开场白或总结。
@@ -57,13 +57,31 @@ javascript:(function main() {
       ],
       "considerations": [
         { "text": "【分析维度1】", "enabled": true },
-        { "text": "【分析维度2】", "enabled": true },
-        { "text": "【分析维度3】", "enabled": true }
+        { "text": "【分析维度2】", "enabled": true }
       ],
       "timeliness": "[与领域相关的时效性提醒，必须包含占位符 '[模型训练截止日期]']",
       "selfCorrection": [
         "如果我说'[典型反馈1]'，你应该...",
         "如果我说'[典型反馈2]'，你应该..."
+      ],
+      "personalizationProfiles": [
+        {
+          "profileName": "[配置项名称1，例如：沟通语调]",
+          "ui": "radio",
+          "options": [
+            { "optionName": "[选项1]", "directive": "[选中此选项时注入的指令文本]", "default": true },
+            { "optionName": "[选项2]", "directive": "[选中此选项时注入的指令文本]", "default": false },
+            { "optionName": "[选项3]", "directive": "[选中此选项时注入的指令文本]", "default": false }
+          ]
+        },
+        {
+          "profileName": "[配置项名称2，例如：风险倾向]",
+          "ui": "radio",
+          "options": [
+            { "optionName": "[选项A]", "directive": "[选中此选项时注入的指令文本]", "default": true },
+            { "optionName": "[选项B]", "directive": "[选中此选项时注入的指令文本]", "default": false }
+          ]
+        }
       ]
     }
   ]
@@ -73,35 +91,41 @@ javascript:(function main() {
 **生成要求：**
 1.  **顶级键**: 必须包含 \`name\`, \`domain\`, \`commonDirectives\`, 和 \`roles\`。
 2.  **\`name\` 和 \`domain\`**: 其中的 "[领域/主题]" 需替换为我提供的具体内容。
-3.  **\`roles\`**: 必须是一个包含 **[ROLE_COUNT]个** 角色对象的数组。每个角色对象都必须严格遵循示例中的键名（\`name\`, \`description\`, \`definition\`, \`directives\`, \`considerations\`, \`timeliness\`, \`selfCorrection\`）。
-4.  **\`considerations\`**: 必须是一个对象数组，每个对象包含 \`text\` 和 \`enabled\` 两个键。
-5.  **最终输出**: 你的回复**必须且只能是**一个符合上述结构的JSON代码块。不要添加 "好的，这是您要的JSON" 之类的话。
+3.  **\`roles\`**: 必须是一个包含 **[ROLE_COUNT]个** 角色对象的数组。
+4.  **内容数量**: 对于数组中的每一个角色对象：
+    *   \`directives\` 数组中必须包含 **[DIRECTIVES_COUNT]个** 指令字符串。
+    *   \`considerations\` 数组中必须包含 **[CONSIDERATIONS_COUNT]个** 维度对象。
+    *   \`personalizationProfiles\` 数组中必须包含 **[PERSONALIZATION_COUNT]个** 配置项对象。
+5.  **结构遵循**: 所有生成的键名和数据结构必须严格遵循上面的JSON示例。特别是 \`personalizationProfiles\` 及其内部的 \`options\` 结构必须完整，每个配置项至少有3个选项。
+6.  **最终输出**: 你的回复**必须且只能是**一个符合上述结构的JSON代码块。不要添加 "好的，这是您要的JSON" 之类的话。
 
 **现在，请为我提供的以下【领域/主题】生成这个框架的JSON内容：**
 `;
 
     /* --- 脚本状态变量 --- */
     let activePlatform = null;
-    let activeTextarea = null;
     const currentHostname = window.location.hostname + window.location.pathname;
     let isAutoContinuing = false;
     let continueCount = 0;
 
+    /* --- 新增：动态获取当前活动输入框的函数 --- */
+    const getActiveTextarea = () => {
+        if (!activePlatform) return null;
+        return document.querySelector(activePlatform.selector);
+    };
 
-    /* --- 查找当前页面匹配的AI平台和输入框 --- */
+    /* --- 查找当前页面匹配的AI平台 --- */
     for (const platform of AI_PLATFORMS) {
         if (currentHostname.includes(platform.hostname)) {
-            const element = document.querySelector(platform.selector);
-            if (element) {
+            if (document.querySelector(platform.selector)) {
                 activePlatform = platform;
-                activeTextarea = element;
                 break;
             }
         }
     }
 
-    /* --- 如果未找到支持的输入框，则显示错误信息并退出 --- */
-    if (!activeTextarea) {
+    /* --- 如果未找到支持的平台，则显示错误信息并退出 --- */
+    if (!activePlatform) {
         alert('在当前页面未找到支持的AI输入框。脚本无法运行。\n支持平台: Gemini, ChatGPT, DeepSeek等。');
         return;
     }
@@ -138,6 +162,17 @@ javascript:(function main() {
             template.innerHTML = html;
             element.appendChild(template.content);
         }
+    };
+
+    /* --- Bug修复：创建安全的HTML追加函数 --- */
+    const appendSafeHTML = (element, html) => {
+        const template = document.createElement('template');
+        if (policy) {
+            template.innerHTML = policy.createHTML(html);
+        } else {
+            template.innerHTML = html;
+        }
+        element.appendChild(template.content);
     };
 
     /* --- HTML转义函数 --- */
@@ -178,11 +213,19 @@ javascript:(function main() {
         overlay.appendChild(modalContainer);
         document.body.appendChild(overlay);
 
-        const closeModal = () => overlay.remove();
+        const closeModal = () => {
+            const okBtn = overlay.querySelector('#gph-modal-ok');
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            overlay.remove();
+        };
 
-        overlay.querySelector('#gph-modal-ok').addEventListener('click', () => { if(onConfirm) onConfirm(overlay); closeModal(); });
+        overlay.querySelector('#gph-modal-ok').addEventListener('click', () => {
+            if(onConfirm) onConfirm(overlay, closeModal);
+        });
         if(showCancel) overlay.querySelector('#gph-modal-cancel').addEventListener('click', () => { if(onCancel) onCancel(); closeModal(); });
         overlay.querySelector('#gph-modal-close').addEventListener('click', () => { if(onCancel) onCancel(); closeModal(); });
+
+        return overlay;
     };
 
     /* --- CSS 样式 --- */
@@ -203,6 +246,11 @@ javascript:(function main() {
     .gph-role-tab.active { border-bottom-color: var(--accent-primary); color: var(--text-primary); font-weight: bold; }
     .gph-role-section { margin-bottom: 15px; }
     .gph-role-section h5 { margin: 0 0 8px 0; font-size: 14px; color: var(--text-title); border-bottom: 1px solid var(--border-primary); padding-bottom: 5px; }
+    .gph-profile-group { margin-bottom: 12px; } .gph-profile-group:last-child { margin-bottom: 0; }
+    .gph-profile-group h6 { margin: 0 0 6px 0; font-size: 13px; color: var(--text-primary); font-weight: normal; }
+    .gph-radio-item { display: flex; align-items: center; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary); }
+    .gph-radio-item input[type="radio"] { margin-right: 8px; accent-color: var(--accent-primary); }
+    .gph-radio-item label { cursor: pointer; }
     .gph-role-section p, .gph-role-section ul { margin: 0; padding: 0; font-size: 13px; color: var(--text-secondary); list-style: none; }
     .gph-checklist-item { display: flex; align-items: flex-start; margin-bottom: 5px; }
     .gph-checklist-item input { margin-right: 8px; margin-top: 3px; }
@@ -220,17 +268,41 @@ javascript:(function main() {
     #gph-continue-counter { margin-left: 5px; font-weight: bold; }
     @keyframes gph-fade-in { from { opacity: 0; } to { opacity: 1; } } @keyframes gph-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .gph-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: gph-fade-in 0.2s ease-out; }
-    #gph-modal-container { background: var(--bg-primary); color: var(--text-primary); border-radius: 8px; box-shadow: 0 5px 20px var(--shadow-color); width: 90%; max-width: 500px; animation: gph-slide-up 0.3s ease-out; display: flex; flex-direction: column; max-height: 80vh; }
+    #gph-modal-container { background: var(--bg-primary); color: var(--text-primary); border-radius: 8px; box-shadow: 0 5px 20px var(--shadow-color); width: 90%; max-width: 700px; animation: gph-slide-up 0.3s ease-out; display: flex; flex-direction: column; max-height: 85vh; }
     #gph-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-primary); flex-shrink: 0; }
     #gph-modal-title { margin: 0; font-size: 16px; font-weight: bold; }
     #gph-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
     #gph-modal-body { padding: 16px; line-height: 1.6; overflow-y: auto; }
-    #gph-modal-body label { display: block; margin-bottom: 8px; font-size: 13px; }
+    #gph-modal-body label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;}
     #gph-modal-body input, #gph-modal-body textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); border-radius: 4px; padding: 8px; font-size: 13px; box-sizing: border-box; margin-bottom: 12px; }
-    #gph-modal-body input[type="checkbox"] {width: 20px;}
-    #gph-modal-body textarea { min-height: 150px; resize: vertical; }
+    #gph-modal-body input[type="checkbox"], #gph-modal-body input[type="radio"] { width: auto; margin-right: 8px; }
+    #gph-modal-body textarea { min-height: 80px; resize: vertical; }
     #gph-modal-footer { padding: 12px 16px; background: var(--bg-secondary); display: flex; justify-content: flex-end; gap: 10px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; flex-shrink: 0; }
     #gph-modal-footer .gph-action-btn { flex-grow: 0; }
+    .gph-manage-list { list-style: none; padding: 0; margin: 0; }
+    .gph-manage-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid var(--border-primary); gap: 10px; }
+    .gph-manage-item:last-child { border-bottom: none; }
+    .gph-manage-item-name { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gph-manage-item-buttons { display: flex; gap: 8px; flex-shrink: 0; }
+    .gph-manage-item-buttons .gph-action-btn { padding: 5px 10px; font-size: 12px; }
+    .gph-edit-section { border: 1px solid var(--border-primary); border-radius: 6px; padding: 12px; margin-bottom: 16px; }
+    .gph-edit-section > legend { padding: 0 8px; font-weight: bold; color: var(--text-title); }
+    .gph-dynamic-list { display: flex; flex-direction: column; gap: 8px; }
+    .gph-dynamic-list-item { display: flex; align-items: center; gap: 8px; }
+    .gph-dynamic-list-item input[type="text"] { flex-grow: 1; margin-bottom: 0; }
+    .gph-dynamic-list-item-multi { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px; }
+    .gph-dynamic-list-item-multi > div { display: flex; flex-direction: column; }
+    .gph-dynamic-list-item-multi label { margin-bottom: 4px; font-size: 11px; }
+    .gph-dynamic-list-item-multi input { margin-bottom: 0; }
+    .gph-dynamic-list-btn { padding: 4px 8px; font-size: 12px; min-width: 30px; }
+    .gph-add-btn-wrapper { margin-top: 8px; }
+    .gph-edit-accordion details { border-bottom: 1px solid var(--border-primary); margin-bottom: 8px; }
+    .gph-edit-accordion details:last-child { border-bottom: none; }
+    .gph-edit-accordion summary { font-weight: bold; cursor: pointer; padding: 10px 0; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    .gph-edit-accordion summary::-webkit-details-marker { display: none; }
+    .gph-edit-accordion summary::before { content: '▶'; margin-right: 8px; }
+    .gph-edit-accordion details[open] > summary::before { content: '▼'; }
+    .gph-edit-accordion-content { padding: 0 10px 10px; }
     `;
 
     /* --- HTML 结构 --- */
@@ -330,16 +402,42 @@ javascript:(function main() {
         const roleTabsHTML = framework.roles.map((r, i) => `<li class="gph-role-tab ${i === activeRoleIndex ? 'active' : ''}" data-index="${i}">${escapeHTML(r.name)}</li>`).join('');
         const activeRole = framework.roles[activeRoleIndex];
 
-        const detailsHTML = activeRole ? `
-            <div id="gph-role-details">
-                <div class="gph-role-section"><h5>角色定义</h5><p>${escapeHTML(activeRole.definition)}</p></div>
-                <div class="gph-role-section"><h5>核心指令 (勾选以包含)</h5><ul id="gph-directives-list">
-                    ${activeRole.directives.map((d, i) => `<li class="gph-checklist-item"><input type="checkbox" id="dir-${i}" data-index="${i}" checked><label for="dir-${i}">${escapeHTML(d)}</label></li>`).join('')}
-                </ul></div>
-                <div class="gph-role-section"><h5>多维度考量 (勾选以包含)</h5><ul id="gph-considerations-list">
-                     ${activeRole.considerations.map((c, i) => `<li class="gph-checklist-item"><input type="checkbox" id="con-${i}" data-index="${i}" checked><label for="con-${i}">${escapeHTML(c.text)}</label></li>`).join('')}
-                </ul></div>
-            </div>` : '<div>请选择一个角色。</div>';
+        let detailsHTML = '';
+        if (activeRole) {
+            const directivesHTML = activeRole.directives.map((d, i) => `<li class="gph-checklist-item"><input type="checkbox" id="dir-${i}" data-index="${i}" checked><label for="dir-${i}">${escapeHTML(d)}</label></li>`).join('');
+            const considerationsHTML = activeRole.considerations.map((c, i) => `<li class="gph-checklist-item"><input type="checkbox" id="con-${i}" data-index="${i}" checked><label for="con-${i}">${escapeHTML(c.text)}</label></li>`).join('');
+
+            let personalizationHTML = '';
+            if (Array.isArray(activeRole.personalizationProfiles) && activeRole.personalizationProfiles.length > 0) {
+                personalizationHTML = `<div id="gph-personalization-section" class="gph-role-section">
+                                        <h5>个性化配置</h5>
+                                        ${activeRole.personalizationProfiles.map((profile, profileIndex) => {
+                    const radioGroupName = `gph-profile-${profileIndex}-${profile.profileName.replace(/\s+/g, '-')}`;
+                    return `<div class="gph-profile-group">
+                                                        <h6>${escapeHTML(profile.profileName)}</h6>
+                                                        ${profile.options.map((option, optionIndex) => `
+                                                            <div class="gph-radio-item">
+                                                                <input type="radio" id="prof-${profileIndex}-${optionIndex}" name="${radioGroupName}" 
+                                                                       data-profile-index="${profileIndex}" data-option-index="${optionIndex}" ${option.default ? 'checked' : ''}>
+                                                                <label for="prof-${profileIndex}-${optionIndex}">${escapeHTML(option.optionName)}</label>
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>`;
+                }).join('')}
+                                       </div>`;
+            }
+
+            detailsHTML = `
+                <div id="gph-role-details">
+                    <div class="gph-role-section"><h5>使用场景</h5><p>${escapeHTML(activeRole.description)}</p></div>
+                    <div class="gph-role-section"><h5>角色定义</h5><p>${escapeHTML(activeRole.definition)}</p></div>
+                    <div class="gph-role-section"><h5>核心指令 (勾选以包含)</h5><ul id="gph-directives-list">${directivesHTML}</ul></div>
+                    <div class="gph-role-section"><h5>多维度考量 (勾选以包含)</h5><ul id="gph-considerations-list">${considerationsHTML}</ul></div>
+                    ${personalizationHTML}
+                </div>`;
+        } else {
+            detailsHTML = '<div>请选择一个角色。</div>';
+        }
 
         setSafeHTML(bodyEl, `<ul id="gph-role-tabs">${roleTabsHTML}</ul>${detailsHTML}`);
     };
@@ -348,17 +446,49 @@ javascript:(function main() {
     const handleGenerateFramework = () => {
         showModal({
             title: '创建新框架',
-            contentHTML: `<label for="gph-domain-input">请输入领域/主题：</label>
-                          <input type="text" id="gph-domain-input" placeholder="例如：软件开发项目重构" style="margin-bottom: 15px;">
-                          <label for="gph-role-count-input">请输入角色数量 (推荐2-5)：</label>
-                          <input type="number" id="gph-role-count-input" value="3" min="2" max="5">`,
-            onConfirm: (modal) => {
+            contentHTML: `
+                <label for="gph-domain-input">请输入领域/主题：</label>
+                <input type="text" id="gph-domain-input" placeholder="例如：软件开发项目重构" style="margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 15px;">
+                    <div>
+                        <label for="gph-role-count-input" style="margin-bottom: 4px;">角色数量:</label>
+                        <input type="number" id="gph-role-count-input" value="3" min="2" max="5">
+                    </div>
+                    <div>
+                        <label for="gph-directives-count-input" style="margin-bottom: 4px;">核心指令数:</label>
+                        <input type="number" id="gph-directives-count-input" value="3" min="1" max="5">
+                    </div>
+                    <div>
+                        <label for="gph-considerations-count-input" style="margin-bottom: 4px;">考量维度数:</label>
+                        <input type="number" id="gph-considerations-count-input" value="3" min="1" max="5">
+                    </div>
+                    <div>
+                        <label for="gph-personalization-count-input" style="margin-bottom: 4px;">个性化配置数:</label>
+                        <input type="number" id="gph-personalization-count-input" value="2" min="1" max="4">
+                    </div>
+                </div>`,
+            onConfirm: (modal, closeModal) => {
                 const domain = modal.querySelector('#gph-domain-input').value.trim();
-                const roleCount = parseInt(modal.querySelector('#gph-role-count-input').value, 10) || 3;
                 if (!domain) return;
 
-                const finalPrompt = META_PROMPT_TEMPLATE.replace('[ROLE_COUNT]', roleCount);
-                setInputValue(activeTextarea, finalPrompt + domain);
+                const roleCount = parseInt(modal.querySelector('#gph-role-count-input').value, 10) || 3;
+                const directivesCount = parseInt(modal.querySelector('#gph-directives-count-input').value, 10) || 3;
+                const considerationsCount = parseInt(modal.querySelector('#gph-considerations-count-input').value, 10) || 3;
+                const personalizationCount = parseInt(modal.querySelector('#gph-personalization-count-input').value, 10) || 2;
+
+                const finalPrompt = META_PROMPT_TEMPLATE
+                    .replace('[ROLE_COUNT]', roleCount)
+                    .replace('[DIRECTIVES_COUNT]', directivesCount)
+                    .replace('[CONSIDERATIONS_COUNT]', considerationsCount)
+                    .replace('[PERSONALIZATION_COUNT]', personalizationCount);
+
+                const textarea = getActiveTextarea();
+                if (!textarea) {
+                    showModal({ title: '错误', contentHTML: '<p>无法找到AI输入框，请刷新页面或在新会话中重试。</p>', showCancel: false, confirmText: '关闭' });
+                    return;
+                }
+                setInputValue(textarea, finalPrompt + domain);
+                closeModal();
 
                 document.querySelector(activePlatform.sendButtonSelector)?.click();
                 setTimeout(() => {
@@ -366,7 +496,8 @@ javascript:(function main() {
                     showModal({
                         title: '操作指南',
                         contentHTML: `<p>元提示词已发送给AI。</p><p>请等待AI完全生成JSON内容后，<strong>手动复制完整的JSON代码块</strong>，然后点击面板上的【粘贴JSON】按钮来创建新框架。</p>`,
-                        showCancel: false, confirmText: '我明白了'
+                        showCancel: false, confirmText: '我明白了',
+                        onConfirm: (modal, closeModal) => closeModal()
                     });
                 }, 500);
             }
@@ -377,12 +508,14 @@ javascript:(function main() {
         const contentHTML = `<p>请将AI生成的、包含JSON代码块的文本粘贴到下方。</p><textarea id="gph-json-paste-area" rows="10" placeholder="在此处粘贴..."></textarea>`;
         showModal({
             title: '从JSON创建新框架', contentHTML: contentHTML, confirmText: '创建',
-            onConfirm: (modal) => {
+            onConfirm: (modal, closeModal) => {
                 let rawText = modal.querySelector('#gph-json-paste-area').value.trim();
                 if (!rawText) return;
 
                 const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/);
                 const jsonString = jsonMatch ? jsonMatch[1] : (rawText.startsWith('{') ? rawText : null);
+
+                closeModal();
 
                 if (!jsonString) {
                     showModal({ title: '提取失败', contentHTML: `<p>未能在您粘贴的文本中找到有效的JSON代码块 (以 \`\`\`json 开头或直接以 { 开头)。</p>`, showCancel: false, confirmText: '关闭' });
@@ -408,13 +541,268 @@ javascript:(function main() {
         });
     };
 
+    const showGranularEditModal = (indexToEdit) => {
+        const framework = JSON.parse(JSON.stringify(frameworks[indexToEdit]));
+
+        const createDynamicListHTML = (items, type) => {
+            let html = '';
+            if (type === 'string') {
+                html = items.map(item => `
+                    <div class="gph-dynamic-list-item" data-type="string">
+                        <input type="text" value="${escapeHTML(item)}">
+                        <button type="button" class="gph-action-btn gph-secondary-btn gph-dynamic-list-btn gph-delete-item-btn">-</button>
+                    </div>`).join('');
+            } else if (type === 'consideration') {
+                html = items.map(item => `
+                    <div class="gph-dynamic-list-item" data-type="consideration">
+                        <input type="text" value="${escapeHTML(item.text || '')}" placeholder="维度文本">
+                        <input type="checkbox" ${item.enabled ? 'checked' : ''}>
+                        <button type="button" class="gph-action-btn gph-secondary-btn gph-dynamic-list-btn gph-delete-item-btn">-</button>
+                    </div>`).join('');
+            }
+            return html;
+        };
+
+        const createPersonalizationOptionHTML = (option, profileIndex, optionIndex) => `
+             <div class="gph-dynamic-list-item-multi" data-type="option" data-profile-index="${profileIndex}">
+                 <div>
+                     <label>选项名称</label>
+                     <input type="text" class="edit-option-name" value="${escapeHTML(option.optionName || '')}">
+                 </div>
+                 <div>
+                     <label>注入指令</label>
+                     <input type="text" class="edit-option-directive" value="${escapeHTML(option.directive || '')}">
+                 </div>
+                 <div style="text-align: center;">
+                     <label>默认?</label>
+                     <input type="radio" name="default-option-${profileIndex}" ${option.default ? 'checked' : ''}>
+                     <button type="button" class="gph-action-btn gph-secondary-btn gph-dynamic-list-btn gph-delete-item-btn">-</button>
+                 </div>
+             </div>`;
+
+        let contentHTML = `
+            <form id="gph-edit-form">
+                <fieldset class="gph-edit-section">
+                    <legend>基础信息</legend>
+                    <label for="edit-framework-name">框架名称</label>
+                    <input type="text" id="edit-framework-name" value="${escapeHTML(framework.name)}">
+                    <label for="edit-framework-domain">领域/主题</label>
+                    <input type="text" id="edit-framework-domain" value="${escapeHTML(framework.domain)}">
+                </fieldset>
+                
+                <fieldset class="gph-edit-section">
+                    <legend>通用指令</legend>
+                    <label for="edit-common-identity">身份 (Identity)</label>
+                    <textarea id="edit-common-identity">${escapeHTML(framework.commonDirectives.identity)}</textarea>
+                    <label>规则 (Rules)</label>
+                    <div class="gph-dynamic-list" id="edit-common-rules">
+                        ${createDynamicListHTML(framework.commonDirectives.rules, 'string')}
+                    </div>
+                    <div class="gph-add-btn-wrapper">
+                        <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-target="edit-common-rules" data-type="string">+</button>
+                    </div>
+                </fieldset>
+
+                <fieldset class="gph-edit-section">
+                    <legend>角色配置</legend>
+                    <div class="gph-edit-accordion" id="edit-roles-accordion">
+                    ${framework.roles.map((role, roleIndex) => `
+                        <details class="gph-role-item" data-role-index="${roleIndex}">
+                            <summary>${escapeHTML(role.name)} <button type="button" class="gph-action-btn gph-secondary-btn gph-delete-item-btn" style="font-size:12px; padding: 2px 6px;">删除此角色</button></summary>
+                            <div class="gph-edit-accordion-content">
+                                <label>角色名称</label><input type="text" class="edit-role-name" value="${escapeHTML(role.name)}">
+                                <label>描述</label><textarea class="edit-role-description">${escapeHTML(role.description)}</textarea>
+                                <label>定义</label><textarea class="edit-role-definition">${escapeHTML(role.definition)}</textarea>
+                                
+                                <label>核心指令</label>
+                                <div class="gph-dynamic-list" data-role-list="directives">
+                                    ${createDynamicListHTML(role.directives, 'string')}
+                                </div>
+                                <div class="gph-add-btn-wrapper">
+                                    <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="string">+</button>
+                                </div>
+                                
+                                <label style="margin-top: 12px;">多维度考量</label>
+                                <div class="gph-dynamic-list" data-role-list="considerations">
+                                    ${createDynamicListHTML(role.considerations, 'consideration')}
+                                </div>
+                                <div class="gph-add-btn-wrapper">
+                                    <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="consideration">+</button>
+                                </div>
+                                
+                                <label style="margin-top: 12px;">时效性提醒</label><input type="text" class="edit-role-timeliness" value="${escapeHTML(role.timeliness)}">
+                                
+                                <label style="margin-top: 12px;">自我修正</label>
+                                <div class="gph-dynamic-list" data-role-list="selfCorrection">
+                                    ${createDynamicListHTML(role.selfCorrection, 'string')}
+                                </div>
+                                <div class="gph-add-btn-wrapper">
+                                    <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="string">+</button>
+                                </div>
+                                
+                                <div style="margin-top: 12px;">
+                                    <label>个性化配置</label>
+                                    <div class="gph-personalization-profiles-list" data-role-list="personalizationProfiles">
+                                    ${(role.personalizationProfiles || []).map((profile, profileIndex) => `
+                                        <fieldset class="gph-edit-section" data-profile-index="${profileIndex}">
+                                            <legend>配置项 <button type="button" class="gph-action-btn gph-secondary-btn gph-delete-item-btn" style="font-size:12px; padding: 2px 6px;">-</button></legend>
+                                            <label>配置名称</label><input type="text" class="edit-profile-name" value="${escapeHTML(profile.profileName)}">
+                                            <label>选项</label>
+                                            <div class="gph-dynamic-list">
+                                                ${(profile.options || []).map((opt, optIndex) => createPersonalizationOptionHTML(opt, profileIndex, optIndex)).join('')}
+                                            </div>
+                                            <div class="gph-add-btn-wrapper">
+                                                <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="option" data-profile-index="${profileIndex}">+ 添加选项</button>
+                                            </div>
+                                        </fieldset>
+                                    `).join('')}
+                                    </div>
+                                    <div class="gph-add-btn-wrapper">
+                                        <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="profile">+ 添加配置项</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>`).join('')}
+                    </div>
+                    <div class="gph-add-btn-wrapper">
+                        <button type="button" id="gph-add-role-btn" class="gph-action-btn">+ 添加新角色</button>
+                    </div>
+                </fieldset>
+            </form>
+        `;
+
+        const modal = showModal({
+            title: `编辑: ${framework.name}`,
+            contentHTML,
+            confirmText: '保存更改',
+            onConfirm: (modalInstance, closeModal) => {
+                const newFramework = {};
+                const form = modalInstance.querySelector('#gph-edit-form');
+
+                newFramework.name = form.querySelector('#edit-framework-name').value;
+                newFramework.domain = form.querySelector('#edit-framework-domain').value;
+                newFramework.commonDirectives = {
+                    identity: form.querySelector('#edit-common-identity').value,
+                    rules: Array.from(form.querySelectorAll('#edit-common-rules .gph-dynamic-list-item input')).map(el => el.value)
+                };
+
+                newFramework.roles = Array.from(form.querySelectorAll('#edit-roles-accordion .gph-role-item')).map(roleEl => {
+                    const role = {
+                        name: roleEl.querySelector('.edit-role-name').value,
+                        description: roleEl.querySelector('.edit-role-description').value,
+                        definition: roleEl.querySelector('.edit-role-definition').value,
+                        timeliness: roleEl.querySelector('.edit-role-timeliness').value,
+                    };
+                    role.directives = Array.from(roleEl.querySelectorAll('[data-role-list="directives"] input')).map(el => el.value);
+                    role.selfCorrection = Array.from(roleEl.querySelectorAll('[data-role-list="selfCorrection"] input')).map(el => el.value);
+                    role.considerations = Array.from(roleEl.querySelectorAll('[data-role-list="considerations"] .gph-dynamic-list-item')).map(conEl => ({
+                        text: conEl.querySelector('input[type="text"]').value,
+                        enabled: conEl.querySelector('input[type="checkbox"]').checked
+                    }));
+                    role.personalizationProfiles = Array.from(roleEl.querySelectorAll('[data-role-list="personalizationProfiles"] > fieldset')).map((profEl) => {
+                        const profile = {
+                            profileName: profEl.querySelector('.edit-profile-name').value,
+                            ui: 'radio'
+                        };
+                        profile.options = Array.from(profEl.querySelectorAll('.gph-dynamic-list-item-multi')).map(optEl => ({
+                            optionName: optEl.querySelector('.edit-option-name').value,
+                            directive: optEl.querySelector('.edit-option-directive').value,
+                            default: optEl.querySelector('input[type="radio"]').checked
+                        }));
+                        return profile;
+                    });
+                    return role;
+                });
+
+                frameworks[indexToEdit] = newFramework;
+                saveFrameworks(frameworks);
+                renderUI();
+                closeModal();
+                showModal({ title: '成功', contentHTML: `<p>框架 <strong>${escapeHTML(newFramework.name)}</strong> 已成功更新！</p>`, showCancel: false, confirmText: '好的' });
+            }
+        });
+
+        modal.querySelector('#gph-modal-body').addEventListener('click', e => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            if (target.matches('.gph-delete-item-btn')) {
+                target.closest('.gph-dynamic-list-item, .gph-dynamic-list-item-multi, details, fieldset[data-profile-index]').remove();
+            } else if (target.matches('.gph-add-item-btn')) {
+                const type = target.dataset.type;
+                const container = target.closest('.gph-add-btn-wrapper').previousElementSibling;
+                let newItemHTML = '';
+                if (type === 'string') {
+                    newItemHTML = `<div class="gph-dynamic-list-item" data-type="string"><input type="text" value=""><button type="button" class="gph-action-btn gph-secondary-btn gph-dynamic-list-btn gph-delete-item-btn">-</button></div>`;
+                } else if (type === 'consideration') {
+                    newItemHTML = `<div class="gph-dynamic-list-item" data-type="consideration"><input type="text" placeholder="维度文本"><input type="checkbox" checked><button type="button" class="gph-action-btn gph-secondary-btn gph-dynamic-list-btn gph-delete-item-btn">-</button></div>`;
+                } else if (type === 'option') {
+                    const profileIndex = target.dataset.profileIndex;
+                    newItemHTML = createPersonalizationOptionHTML({}, profileIndex, container.children.length);
+                } else if (type === 'profile') {
+                    const profileIndex = container.children.length;
+                    newItemHTML = `<fieldset class="gph-edit-section" data-profile-index="${profileIndex}">
+                        <legend>配置项 <button type="button" class="gph-action-btn gph-secondary-btn gph-delete-item-btn" style="font-size:12px; padding: 2px 6px;">-</button></legend>
+                        <label>配置名称</label><input type="text" class="edit-profile-name" value="新配置">
+                        <label>选项</label>
+                        <div class="gph-dynamic-list"></div>
+                        <div class="gph-add-btn-wrapper">
+                           <button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="option" data-profile-index="${profileIndex}">+ 添加选项</button>
+                        </div>
+                    </fieldset>`;
+                }
+                if (newItemHTML) appendSafeHTML(container, newItemHTML);
+            } else if (target.id === 'gph-add-role-btn') {
+                const accordion = document.getElementById('edit-roles-accordion');
+                const roleIndex = accordion.children.length;
+                const newRoleHTML = `
+                    <details class="gph-role-item" data-role-index="${roleIndex}" open>
+                        <summary>新角色 <button type="button" class="gph-action-btn gph-secondary-btn gph-delete-item-btn" style="font-size:12px; padding: 2px 6px;">删除此角色</button></summary>
+                         <div class="gph-edit-accordion-content">
+                             <label>角色名称</label><input type="text" class="edit-role-name" value="新角色">
+                             <label>描述</label><textarea class="edit-role-description"></textarea>
+                             <label>定义</label><textarea class="edit-role-definition"></textarea>
+                             <label>核心指令</label><div class="gph-dynamic-list" data-role-list="directives"></div><div class="gph-add-btn-wrapper"><button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="string">+</button></div>
+                             <label style="margin-top: 12px;">多维度考量</label><div class="gph-dynamic-list" data-role-list="considerations"></div><div class="gph-add-btn-wrapper"><button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="consideration">+</button></div>
+                             <label style="margin-top: 12px;">时效性提醒</label><input type="text" class="edit-role-timeliness" value="">
+                             <label style="margin-top: 12px;">自我修正</label><div class="gph-dynamic-list" data-role-list="selfCorrection"></div><div class="gph-add-btn-wrapper"><button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="string">+</button></div>
+                             <div style="margin-top: 12px;"><label>个性化配置</label><div class="gph-personalization-profiles-list" data-role-list="personalizationProfiles"></div><div class="gph-add-btn-wrapper"><button type="button" class="gph-action-btn gph-secondary-btn gph-add-item-btn" data-type="profile">+ 添加配置项</button></div></div>
+                         </div>
+                    </details>`;
+                appendSafeHTML(accordion, newRoleHTML);
+            }
+        });
+
+        modal.querySelector('#gph-modal-body').addEventListener('input', e => {
+            if (e.target.matches('.edit-role-name')) {
+                const newName = e.target.value;
+                const summary = e.target.closest('details').querySelector('summary');
+                summary.childNodes[0].nodeValue = newName + ' ';
+            }
+        });
+    };
+
     const handleCombineAndSend = () => {
         if (activeFrameworkIndex < 0) return;
         const framework = frameworks[activeFrameworkIndex];
         const role = framework.roles[activeRoleIndex];
 
+        const textarea = getActiveTextarea();
+        if (!textarea) {
+            showModal({ title: '错误', contentHTML: '<p>无法找到AI输入框，请刷新页面或在新会话中重试。</p>', showCancel: false, confirmText: '关闭' });
+            return;
+        }
+
         const checkedDirectives = Array.from(bodyEl.querySelectorAll('#gph-directives-list input:checked')).map(cb => role.directives[cb.dataset.index]);
         const checkedConsiderations = Array.from(bodyEl.querySelectorAll('#gph-considerations-list input:checked')).map(cb => role.considerations[cb.dataset.index].text);
+
+        const personalizationDirectives = Array.from(bodyEl.querySelectorAll('#gph-personalization-section input[type="radio"]:checked'))
+            .map(radio => {
+                const profileIndex = parseInt(radio.dataset.profileIndex, 10);
+                const optionIndex = parseInt(radio.dataset.optionIndex, 10);
+                return role.personalizationProfiles[profileIndex]?.options[optionIndex]?.directive;
+            })
+            .filter(Boolean);
 
         const promptParts = [
             framework.commonDirectives.identity,
@@ -423,29 +811,70 @@ javascript:(function main() {
         ];
         if (checkedDirectives.length > 0) promptParts.push(`\n## 核心指令：\n- ${checkedDirectives.join('\n- ')}`);
 
-        const originalContent = getInputValue(activeTextarea);
+        if (personalizationDirectives.length > 0) promptParts.push(`\n## 个性化指令：\n- ${personalizationDirectives.join('\n- ')}`);
+
+        const originalContent = getInputValue(textarea);
         if (originalContent.trim()) promptParts.push(`\n## 任务内容：\n${originalContent}`);
         if (checkedConsiderations.length > 0) promptParts.push(`\n## 输出要求：\n请在你的回答中，必须包含对以下维度的深入分析：\n- ${checkedConsiderations.join('\n- ')}`);
 
         promptParts.push(`\n---\n${role.timeliness}\n\n${role.selfCorrection.join('\n')}`);
 
-        setInputValue(activeTextarea, promptParts.join('\n\n'));
+        setInputValue(textarea, promptParts.join('\n\n'));
         document.querySelector(activePlatform.sendButtonSelector)?.click();
     };
 
     const handleManageFrameworks = () => {
-        const contentHTML = `<ul>${frameworks.map((f, i) => `<li class="gph-checklist-item"><input type="checkbox" id="del-${i}" data-index="${i}"><label for="del-${i}">${escapeHTML(f.name)}</label></li>`).join('')}</ul>`;
-        showModal({
-            title: '管理框架', contentHTML: `<p>选择要删除的框架：</p>${contentHTML}`, confirmText: '删除所选',
-            onConfirm: (modal) => {
-                const indicesToDelete = Array.from(modal.querySelectorAll('input:checked')).map(cb => parseInt(cb.dataset.index)).reverse();
-                if (indicesToDelete.length === 0) return;
-                if (!confirm(`您确定要删除 ${indicesToDelete.length} 个框架吗？此操作不可撤销。`)) return;
+        const getManageListHTML = () => {
+            if (frameworks.length === 0) return '<p>没有可管理的框架。</p>';
+            return `<ul class="gph-manage-list">${frameworks.map((f, i) => `
+                <li class="gph-manage-item" data-index="${i}">
+                    <span class="gph-manage-item-name" title="${escapeHTML(f.name)}">${escapeHTML(f.name)}</span>
+                    <div class="gph-manage-item-buttons">
+                        <button class="gph-action-btn gph-edit-btn">编辑</button>
+                        <button class="gph-action-btn gph-secondary-btn gph-delete-btn">删除</button>
+                    </div>
+                </li>`).join('')}</ul>`;
+        };
 
-                indicesToDelete.forEach(index => frameworks.splice(index, 1));
-                activeFrameworkIndex = (frameworks.length > 0) ? Math.max(0, frameworks.length - 1) : -1;
-                saveFrameworks(frameworks);
-                renderUI();
+        const modal = showModal({
+            title: '管理框架',
+            contentHTML: getManageListHTML(),
+            showCancel: false,
+            confirmText: '关闭',
+            onConfirm: (modalInstance, closeModal) => closeModal()
+        });
+
+        const modalBody = modal.querySelector('#gph-modal-body');
+        modalBody.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.gph-edit-btn');
+            const deleteBtn = e.target.closest('.gph-delete-btn');
+            const item = e.target.closest('.gph-manage-item');
+
+            if (!item) return;
+            const index = parseInt(item.dataset.index, 10);
+
+            if (editBtn) {
+                showGranularEditModal(index);
+            } else if (deleteBtn) {
+                const frameworkToDelete = frameworks[index];
+                showModal({
+                    title: '确认删除',
+                    contentHTML: `<p>你确定要删除框架 <strong>"${escapeHTML(frameworkToDelete.name)}"</strong> 吗？此操作无法撤销。</p>`,
+                    confirmText: '确认删除',
+                    onConfirm: (confirmModal, closeConfirmModal) => {
+                        frameworks.splice(index, 1);
+                        if (frameworks.length === 0) {
+                            activeFrameworkIndex = -1;
+                        } else {
+                            activeFrameworkIndex = Math.min(activeFrameworkIndex, frameworks.length - 1);
+                        }
+                        saveFrameworks(frameworks);
+                        renderUI();
+
+                        setSafeHTML(modalBody, getManageListHTML());
+                        closeConfirmModal();
+                    }
+                });
             }
         });
     };
@@ -499,29 +928,38 @@ javascript:(function main() {
             if (!isAutoContinuing) break;
 
             console.log('GPH: AI生成结束。');
-
             await sleep(1000);
-            const sendButton = document.querySelector(activePlatform.sendButtonSelector);
-            if (!sendButton) {
-                console.error('GPH Error: 未找到发送按钮，停止任务。');
-                showModal({ title: '错误', contentHTML: '<p>找不到发送按钮，自动继续已停止。</p>', showCancel: false, confirmText: '关闭' });
-                break;
-            }
 
             console.log('GPH: 准备发送 "继续"...');
             await sleep(200);
-            setInputValue(activeTextarea, '继续');
+
+            const textarea = getActiveTextarea();
+            if (!textarea) {
+                showModal({ title: '错误', contentHTML: '<p>在自动继续期间找不到输入框，任务已中止。</p>', showCancel: false, confirmText: '关闭' });
+                stopAutoContinue();
+                return;
+            }
+            setInputValue(textarea, '继续');
 
             let attempts = 0;
             const maxAttempts = 20;
+            let sendButton;
 
-            while ((sendButton.disabled || sendButton.getAttribute('aria-disabled') === 'true') && isAutoContinuing) {
+            while (isAutoContinuing) {
+                sendButton = document.querySelector(activePlatform.sendButtonSelector);
+
+                if (sendButton && !sendButton.disabled && sendButton.getAttribute('aria-disabled') !== 'true') {
+                    console.log('GPH: 按钮已启用，准备发送...');
+                    break;
+                }
+
                 if (attempts >= maxAttempts) {
-                    console.error('GPH Error: 发送按钮长时间未启用，自动继续任务中止。');
-                    showModal({ title: '错误', contentHTML: '<p>发送按钮长时间未启用，自动继续任务已中止。请检查页面状态。</p>', showCancel: false, confirmText: '关闭' });
+                    console.error('GPH Error: 发送按钮长时间未启用或未找到，自动继续任务中止。');
+                    showModal({ title: '错误', contentHTML: '<p>发送按钮长时间未启用或未找到，自动继续任务已中止。请检查页面状态。</p>', showCancel: false, confirmText: '关闭' });
                     stopAutoContinue();
                     return;
                 }
+
                 console.log(`GPH: 等待发送按钮启用... (尝试 ${attempts + 1}/${maxAttempts})`);
                 await sleep(500);
                 attempts++;
@@ -529,10 +967,15 @@ javascript:(function main() {
 
             if (!isAutoContinuing) break;
 
-            console.log('GPH: 按钮已启用，发送 "继续"...');
-            sendButton.click();
-            scrollToBottom();
-            continueCount--;
+            if (sendButton) {
+                console.log('GPH: 发送 "继续"...');
+                sendButton.click();
+                scrollToBottom();
+                continueCount--;
+            } else {
+                console.error('GPH Error: 最终未能获取到有效的发送按钮。');
+                stopAutoContinue();
+            }
         }
 
         stopAutoContinue();
@@ -561,7 +1004,8 @@ javascript:(function main() {
                         title: '任务准备就绪',
                         contentHTML: `<p>请手动发送您的初始请求。脚本将在AI开始生成后接管，并自动继续 ${num} 次。</p><p>您可以随时点击【停止】按钮来中止任务。</p>`,
                         showCancel: false,
-                        confirmText: '我明白了'
+                        confirmText: '我明白了',
+                        onConfirm: (modal, closeModal) => closeModal()
                     });
                     startAutoContinue();
                 }
