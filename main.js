@@ -17,6 +17,7 @@ javascript:(function main() {
     /* --- 本地存储KEY --- */
     const STORAGE_KEY_FRAMEWORKS = 'gph_roleFrameworks_v2';
     const STORAGE_KEY_PANEL_STATE = 'gph_panelState_v1';
+    const STORAGE_KEY_GENERAL_PROMPTS = 'gph_generalPrompts_v1'; /* --- 新增：通用提示词存储KEY --- */
 
     /* --- AI平台配置 (已集成自动继续所需的选择器) --- */
     const AI_PLATFORMS = [
@@ -107,6 +108,7 @@ javascript:(function main() {
     const currentHostname = window.location.hostname + window.location.pathname;
     let isAutoContinuing = false;
     let continueCount = 0;
+    let isGeneralModeActive = false; /* --- 新增：通用模式状态 --- */
 
     /* --- 新增：动态获取当前活动输入框的函数 --- */
     const getActiveTextarea = () => {
@@ -137,9 +139,18 @@ javascript:(function main() {
     const loadFrameworks = () => {
         try { const storedData = localStorage.getItem(STORAGE_KEY_FRAMEWORKS); return storedData ? JSON.parse(storedData) : []; } catch (e) { console.error("GPH Error: Failed to load frameworks.", e); return []; }
     };
+    /* --- 新增：通用提示词持久化函数 --- */
+    const saveGeneralPrompts = (data) => {
+        try { localStorage.setItem(STORAGE_KEY_GENERAL_PROMPTS, JSON.stringify(data)); } catch (e) { console.error("GPH Error: Failed to save general prompts.", e); }
+    };
+    const loadGeneralPrompts = () => {
+        try { const storedData = localStorage.getItem(STORAGE_KEY_GENERAL_PROMPTS); return storedData ? JSON.parse(storedData) : []; } catch (e) { console.error("GPH Error: Failed to load general prompts.", e); return []; }
+    };
+
 
     /* --- 加载数据 --- */
     let frameworks = loadFrameworks();
+    let generalPrompts = loadGeneralPrompts(); /* --- 新增：加载通用提示词 --- */
 
     /* --- 更多状态变量 --- */
     let activeFrameworkIndex = frameworks.length > 0 ? 0 : -1;
@@ -235,7 +246,7 @@ javascript:(function main() {
     #gemini-mvp-helper { position: fixed; bottom: 20px; right: 20px; width: 550px; background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px; box-shadow: 0 4px 15px var(--shadow-color); z-index: 9999; color: var(--text-primary); font-family: sans-serif; display: flex; flex-direction: column; max-height: 85vh; resize: both; overflow: auto; min-width: 350px; min-height: 200px; }
     #gph-header { padding: 10px 15px; background: var(--bg-header); cursor: move; user-select: none; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
     #gph-title { margin: 0; font-size: 14px; font-weight: normal; color: var(--text-title); }
-    #gph-framework-manager { display: flex; gap: 10px; padding: 10px 15px; border-bottom: 1px solid var(--border-primary); align-items: center; flex-shrink: 0; }
+    #gph-framework-manager { display: flex; gap: 10px; padding: 10px 15px; border-bottom: 1px solid var(--border-primary); align-items: center; flex-shrink: 0; flex-wrap: wrap; }
     #gph-framework-selector { flex-grow: 1; background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); border-radius: 4px; padding: 8px; font-size: 13px; }
     .gph-action-btn { background: var(--accent-primary); color: var(--text-button); border: 1px solid var(--accent-primary); border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 13px; white-space: nowrap; }
     .gph-action-btn:hover { filter: brightness(1.1); }
@@ -244,6 +255,9 @@ javascript:(function main() {
     #gph-role-tabs { display: flex; border-bottom: 1px solid var(--border-primary); margin-bottom: 15px; flex-wrap: wrap; }
     .gph-role-tab { list-style: none; padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 13px; color: var(--text-secondary); }
     .gph-role-tab.active { border-bottom-color: var(--accent-primary); color: var(--text-primary); font-weight: bold; }
+    #gph-general-tab { margin-left: auto; border-left: 1px solid var(--border-primary); } /* --- 新增：通用页签样式 --- */
+    #gph-general-prompts-container { display: flex; flex-wrap: wrap; gap: 10px; } /* --- 新增：通用提示词容器样式 --- */
+    .gph-general-prompt-btn { flex-grow: 1; text-align: left;    white-space: nowrap;      /* 1. 防止文本换行 */overflow: hidden;         /* 2. 隐藏溢出的部分 */text-overflow: ellipsis;  /* 3. 将溢出部分显示为省略号 */} /* --- 新增：通用提示词按钮样式 --- */
     .gph-role-section { margin-bottom: 15px; }
     .gph-role-section h5 { margin: 0 0 8px 0; font-size: 14px; color: var(--text-title); border-bottom: 1px solid var(--border-primary); padding-bottom: 5px; }
     .gph-profile-group { margin-bottom: 12px; } .gph-profile-group:last-child { margin-bottom: 0; }
@@ -337,7 +351,8 @@ javascript:(function main() {
             <select id="gph-framework-selector"></select>
             <button id="gph-new-framework-btn" class="gph-action-btn" title="生成元提示词">+</button>
             <button id="gph-paste-json-btn" class="gph-action-btn gph-secondary-btn" title="粘贴AI返回的JSON创建框架">粘贴JSON</button>
-            <button id="gph-manage-framework-btn" class="gph-action-btn gph-secondary-btn">管理</button>
+            <button id="gph-manage-framework-btn" class="gph-action-btn gph-secondary-btn">管理框架</button>
+            <button id="gph-manage-general-btn" class="gph-action-btn gph-secondary-btn">管理通用</button> <!--- 新增：管理通用提示词按钮 --->
         </div>
         <div id="gph-body"></div>
         <div id="gph-footer">
@@ -367,79 +382,107 @@ javascript:(function main() {
     const frameworkSelector = panel.querySelector('#gph-framework-selector');
 
     /* --- 跨平台输入框操作函数 --- */
-    const getInputValue = (element) => element.isContentEditable ? Array.from(element.querySelectorAll('p')).map(p => p.textContent).join('\n') : (element.value || element.textContent);
-    const setInputValue = (element, value) => {
+    const setInputValue = (element, value, append = false) => {
+        const currentContent = append ? getInputValue(element) : '';
+        const newContent = append ? `${currentContent}\n${value}`.trim() : value;
         if (element.isContentEditable) {
-            setSafeHTML(element, value.split('\n').map(line => `<p>${escapeHTML(line) || '<br>'}</p>`).join(''));
+            setSafeHTML(element, newContent.split('\n').map(line => `<p>${escapeHTML(line) || '<br>'}</p>`).join(''));
         } else {
-            element.value = value;
+            element.value = newContent;
         }
         element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
     };
 
     /* --- UI 渲染函数 --- */
     const renderUI = () => {
-        if (frameworks.length === 0) {
-            const welcomeHTML = `<div id="gph-welcome-screen"><h4>无可用框架</h4><p>点击 "+" 向AI请求生成框架JSON，<br>然后点击【粘贴JSON】来创建您的第一个框架。</p></div>`;
-            setSafeHTML(bodyEl, welcomeHTML);
-            setSafeHTML(frameworkSelector, '<option>无可用框架</option>');
-            frameworkSelector.disabled = true;
-            panel.querySelector('#gph-manage-framework-btn').style.display = 'none';
-            panel.querySelector('#gph-combine-send-btn').style.display = 'none';
-            return;
+        /* --- 根据模式显示/隐藏相关控件 --- */
+        const frameworkControls = ['#gph-new-framework-btn', '#gph-paste-json-btn', '#gph-manage-framework-btn', '#gph-combine-send-btn'];
+        const generalControls = ['#gph-manage-general-btn'];
+        frameworkControls.forEach(sel => panel.querySelector(sel).style.display = isGeneralModeActive ? 'none' : 'inline-block');
+        generalControls.forEach(sel => panel.querySelector(sel).style.display = isGeneralModeActive ? 'inline-block' : 'none');
+
+        /* --- Bug修复：统一渲染页签，确保所有页签始终可见 --- */
+        let roleTabsHTML = '';
+        if (frameworks.length > 0 && frameworks[activeFrameworkIndex]) {
+            const framework = frameworks[activeFrameworkIndex];
+            roleTabsHTML = framework.roles.map((r, i) =>
+                `<li class="gph-role-tab ${!isGeneralModeActive && i === activeRoleIndex ? 'active' : ''}" data-index="${i}">${escapeHTML(r.name)}</li>`
+            ).join('');
         }
+        const generalTabHTML = `<li id="gph-general-tab" class="gph-role-tab ${isGeneralModeActive ? 'active' : ''}">通用指令</li>`;
+        const fullTabsHTML = `<ul id="gph-role-tabs">${roleTabsHTML}${generalTabHTML}</ul>`;
 
-        frameworkSelector.disabled = false;
-        panel.querySelector('#gph-manage-framework-btn').style.display = 'inline-block';
-        panel.querySelector('#gph-combine-send-btn').style.display = 'inline-block';
+        let bodyContentHTML = '';
 
-        const selectorHTML = frameworks.map((f, i) => `<option value="${i}" ${i === activeFrameworkIndex ? 'selected' : ''}>${escapeHTML(f.name)}</option>`).join('');
-        setSafeHTML(frameworkSelector, selectorHTML);
-
-        const framework = frameworks[activeFrameworkIndex];
-        if (!framework) return;
-
-        const roleTabsHTML = framework.roles.map((r, i) => `<li class="gph-role-tab ${i === activeRoleIndex ? 'active' : ''}" data-index="${i}">${escapeHTML(r.name)}</li>`).join('');
-        const activeRole = framework.roles[activeRoleIndex];
-
-        let detailsHTML = '';
-        if (activeRole) {
-            const directivesHTML = activeRole.directives.map((d, i) => `<li class="gph-checklist-item"><input type="checkbox" id="dir-${i}" data-index="${i}" checked><label for="dir-${i}">${escapeHTML(d)}</label></li>`).join('');
-            const considerationsHTML = activeRole.considerations.map((c, i) => `<li class="gph-checklist-item"><input type="checkbox" id="con-${i}" data-index="${i}" checked><label for="con-${i}">${escapeHTML(c.text)}</label></li>`).join('');
-
-            let personalizationHTML = '';
-            if (Array.isArray(activeRole.personalizationProfiles) && activeRole.personalizationProfiles.length > 0) {
-                personalizationHTML = `<div id="gph-personalization-section" class="gph-role-section">
-                                        <h5>个性化配置</h5>
-                                        ${activeRole.personalizationProfiles.map((profile, profileIndex) => {
-                    const radioGroupName = `gph-profile-${profileIndex}-${profile.profileName.replace(/\s+/g, '-')}`;
-                    return `<div class="gph-profile-group">
-                                                        <h6>${escapeHTML(profile.profileName)}</h6>
-                                                        ${profile.options.map((option, optionIndex) => `
-                                                            <div class="gph-radio-item">
-                                                                <input type="radio" id="prof-${profileIndex}-${optionIndex}" name="${radioGroupName}" 
-                                                                       data-profile-index="${profileIndex}" data-option-index="${optionIndex}" ${option.default ? 'checked' : ''}>
-                                                                <label for="prof-${profileIndex}-${optionIndex}">${escapeHTML(option.optionName)}</label>
-                                                            </div>
-                                                        `).join('')}
-                                                    </div>`;
-                }).join('')}
-                                       </div>`;
+        if (isGeneralModeActive) {
+            /* --- 渲染通用模式主体 --- */
+            panel.querySelector('#gph-framework-selector').style.display = 'none';
+            if (generalPrompts.length === 0) {
+                bodyContentHTML = `<div id="gph-welcome-screen"><h4>无通用指令</h4><p>点击【管理通用】按钮来添加您的第一个快捷指令。</p></div>`;
+            } else {
+                const promptsHTML = generalPrompts.map((p, i) =>
+                    `<button class="gph-action-btn gph-secondary-btn gph-general-prompt-btn" data-index="${i}" title="${escapeHTML(p.prompt)}">${escapeHTML(p.name)}</button>`
+                ).join('');
+                bodyContentHTML = `<div id="gph-general-prompts-container">${promptsHTML}</div>`;
             }
-
-            detailsHTML = `
-                <div id="gph-role-details">
-                    <div class="gph-role-section"><h5>使用场景</h5><p>${escapeHTML(activeRole.description)}</p></div>
-                    <div class="gph-role-section"><h5>角色定义</h5><p>${escapeHTML(activeRole.definition)}</p></div>
-                    <div class="gph-role-section"><h5>核心指令 (勾选以包含)</h5><ul id="gph-directives-list">${directivesHTML}</ul></div>
-                    <div class="gph-role-section"><h5>多维度考量 (勾选以包含)</h5><ul id="gph-considerations-list">${considerationsHTML}</ul></div>
-                    ${personalizationHTML}
-                </div>`;
         } else {
-            detailsHTML = '<div>请选择一个角色。</div>';
+            /* --- 渲染框架模式主体 --- */
+            panel.querySelector('#gph-framework-selector').style.display = 'inline-block';
+            if (frameworks.length === 0) {
+                bodyContentHTML = `<div id="gph-welcome-screen"><h4>无可用框架</h4><p>点击 "+" 向AI请求生成框架JSON，<br>然后点击【粘贴JSON】来创建您的第一个框架。</p></div>`;
+                setSafeHTML(frameworkSelector, '<option>无可用框架</option>');
+                frameworkSelector.disabled = true;
+                panel.querySelector('#gph-manage-framework-btn').style.display = 'none';
+                panel.querySelector('#gph-combine-send-btn').style.display = 'none';
+            } else {
+                frameworkSelector.disabled = false;
+                panel.querySelector('#gph-manage-framework-btn').style.display = 'inline-block';
+                panel.querySelector('#gph-combine-send-btn').style.display = 'inline-block';
+
+                const selectorHTML = frameworks.map((f, i) => `<option value="${i}" ${i === activeFrameworkIndex ? 'selected' : ''}>${escapeHTML(f.name)}</option>`).join('');
+                setSafeHTML(frameworkSelector, selectorHTML);
+
+                const framework = frameworks[activeFrameworkIndex];
+                const activeRole = framework.roles[activeRoleIndex];
+
+                if (activeRole) {
+                    const directivesHTML = activeRole.directives.map((d, i) => `<li class="gph-checklist-item"><input type="checkbox" id="dir-${i}" data-index="${i}" checked><label for="dir-${i}">${escapeHTML(d)}</label></li>`).join('');
+                    const considerationsHTML = activeRole.considerations.map((c, i) => `<li class="gph-checklist-item"><input type="checkbox" id="con-${i}" data-index="${i}" checked><label for="con-${i}">${escapeHTML(c.text)}</label></li>`).join('');
+
+                    let personalizationHTML = '';
+                    if (Array.isArray(activeRole.personalizationProfiles) && activeRole.personalizationProfiles.length > 0) {
+                        personalizationHTML = `<div id="gph-personalization-section" class="gph-role-section">
+                                                <h5>个性化配置</h5>
+                                                ${activeRole.personalizationProfiles.map((profile, profileIndex) => {
+                            const radioGroupName = `gph-profile-${profileIndex}-${profile.profileName.replace(/\s+/g, '-')}`;
+                            return `<div class="gph-profile-group">
+                                                                <h6>${escapeHTML(profile.profileName)}</h6>
+                                                                ${profile.options.map((option, optionIndex) => `
+                                                                    <div class="gph-radio-item">
+                                                                        <input type="radio" id="prof-${profileIndex}-${optionIndex}" name="${radioGroupName}" 
+                                                                               data-profile-index="${profileIndex}" data-option-index="${optionIndex}" ${option.default ? 'checked' : ''}>
+                                                                        <label for="prof-${profileIndex}-${optionIndex}">${escapeHTML(option.optionName)}</label>
+                                                                    </div>
+                                                                `).join('')}
+                                                            </div>`;
+                        }).join('')}
+                                               </div>`;
+                    }
+                    bodyContentHTML = `
+                        <div id="gph-role-details">
+                            <div class="gph-role-section"><h5>使用场景</h5><p>${escapeHTML(activeRole.description)}</p></div>
+                            <div class="gph-role-section"><h5>角色定义</h5><p>${escapeHTML(activeRole.definition)}</p></div>
+                            <div class="gph-role-section"><h5>核心指令 (勾选以包含)</h5><ul id="gph-directives-list">${directivesHTML}</ul></div>
+                            <div class="gph-role-section"><h5>多维度考量 (勾选以包含)</h5><ul id="gph-considerations-list">${considerationsHTML}</ul></div>
+                            ${personalizationHTML}
+                        </div>`;
+                } else {
+                    bodyContentHTML = '<div>请选择一个角色。</div>';
+                }
+            }
         }
 
-        setSafeHTML(bodyEl, `<ul id="gph-role-tabs">${roleTabsHTML}</ul>${detailsHTML}`);
+        setSafeHTML(bodyEl, fullTabsHTML + bodyContentHTML);
     };
 
     /* --- 核心工作流函数 --- */
@@ -822,7 +865,14 @@ javascript:(function main() {
         setInputValue(textarea, promptParts.join('\n\n'));
         document.querySelector(activePlatform.sendButtonSelector)?.click();
     };
-
+    /* --- 跨平台获取输入框内容函数 --- */
+    const getInputValue = (element) => {
+        if (!element) return '';
+        if (element.isContentEditable) {
+            return element.innerText;
+        }
+        return element.value;
+    };
     const handleManageFrameworks = () => {
         const getManageListHTML = () => {
             if (frameworks.length === 0) return '<p>没有可管理的框架。</p>';
@@ -875,6 +925,89 @@ javascript:(function main() {
                         closeConfirmModal();
                     }
                 });
+            }
+        });
+    };
+
+    /* --- 新增：通用提示词管理函数 --- */
+    const handleManageGeneralPrompts = () => {
+        const showEditPromptModal = (index = -1) => {
+            const isEditing = index > -1;
+            const prompt = isEditing ? generalPrompts[index] : { name: '', prompt: '' };
+            showModal({
+                title: isEditing ? '编辑通用指令' : '新增通用指令',
+                contentHTML: `
+                    <label for="gph-prompt-name">指令名称 (按钮上显示):</label>
+                    <input type="text" id="gph-prompt-name" value="${escapeHTML(prompt.name)}">
+                    <label for="gph-prompt-content">指令内容:</label>
+                    <textarea id="gph-prompt-content" rows="6">${escapeHTML(prompt.prompt)}</textarea>`,
+                confirmText: '保存',
+                onConfirm: (modal, closeModal) => {
+                    const name = modal.querySelector('#gph-prompt-name').value.trim();
+                    const content = modal.querySelector('#gph-prompt-content').value.trim();
+                    if (!name || !content) return;
+
+                    const newPrompt = { name: name, prompt: content };
+                    if (isEditing) {
+                        generalPrompts[index] = newPrompt;
+                    } else {
+                        generalPrompts.push(newPrompt);
+                    }
+                    saveGeneralPrompts(generalPrompts);
+                    closeModal();
+                    handleManageGeneralPrompts();
+                    renderUI();
+                }
+            });
+        };
+
+        const getManageListHTML = () => {
+            if (generalPrompts.length === 0) return '<p>没有可管理的通用指令。</p>';
+            return `<ul class="gph-manage-list">${generalPrompts.map((p, i) => `
+                <li class="gph-manage-item" data-index="${i}">
+                    <span class="gph-manage-item-name" title="${escapeHTML(p.prompt)}">${escapeHTML(p.name)}</span>
+                    <div class="gph-manage-item-buttons">
+                        <button class="gph-action-btn gph-edit-general-btn">编辑</button>
+                        <button class="gph-action-btn gph-secondary-btn gph-delete-general-btn">删除</button>
+                    </div>
+                </li>`).join('')}</ul>`;
+        };
+
+        const modal = showModal({
+            title: '管理通用指令',
+            contentHTML: `${getManageListHTML()}<div class="gph-add-btn-wrapper" style="text-align:right; margin-top:20px;"><button id="gph-add-new-general-btn" class="gph-action-btn">新增指令</button></div>`,
+            showCancel: false,
+            confirmText: '关闭',
+            onConfirm: (modalInstance, closeModal) => closeModal()
+        });
+
+        const modalBody = modal.querySelector('#gph-modal-body');
+        modalBody.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.gph-edit-general-btn');
+            const deleteBtn = e.target.closest('.gph-delete-general-btn');
+            const addBtn = e.target.closest('#gph-add-new-general-btn');
+            const item = e.target.closest('.gph-manage-item');
+
+            if (addBtn) {
+                showEditPromptModal();
+            } else if (item) {
+                const index = parseInt(item.dataset.index, 10);
+                if (editBtn) {
+                    showEditPromptModal(index);
+                } else if (deleteBtn) {
+                    showModal({
+                        title: '确认删除',
+                        contentHTML: `<p>你确定要删除指令 <strong>"${escapeHTML(generalPrompts[index].name)}"</strong> 吗？</p>`,
+                        confirmText: '确认删除',
+                        onConfirm: (_, closeConfirmModal) => {
+                            generalPrompts.splice(index, 1);
+                            saveGeneralPrompts(generalPrompts);
+                            setSafeHTML(modalBody, `${getManageListHTML()}<div class="gph-add-btn-wrapper" style="text-align:right; margin-top:20px;"><button id="gph-add-new-general-btn" class="gph-action-btn">新增指令</button></div>`);
+                            closeConfirmModal();
+                            renderUI();
+                        }
+                    });
+                }
             }
         });
     };
@@ -990,6 +1123,7 @@ javascript:(function main() {
         else if (target.id === 'gph-paste-json-btn') handlePasteAndCreateFramework();
         else if (target.id === 'gph-combine-send-btn') handleCombineAndSend();
         else if (target.id === 'gph-manage-framework-btn') handleManageFrameworks();
+        else if (target.id === 'gph-manage-general-btn') handleManageGeneralPrompts(); /* --- 新增：通用管理事件 --- */
         else if (target.id === 'gph-auto-continue-btn') {
             if (isAutoContinuing) {
                 stopAutoContinue();
@@ -1012,8 +1146,40 @@ javascript:(function main() {
             }
         }
         else if (target.matches('.gph-role-tab')) {
-            activeRoleIndex = parseInt(target.dataset.index);
+            if (target.id === 'gph-general-tab') {
+                isGeneralModeActive = true;
+            } else {
+                isGeneralModeActive = false;
+                activeRoleIndex = parseInt(target.dataset.index);
+            }
             renderUI();
+        }
+        else if (target.matches('.gph-general-prompt-btn')) { /* --- 新增：通用指令按钮点击事件 (已添加调试日志) --- */
+            console.log('%c--- GPH DEBUG: General Prompt Click ---', 'color: #3966B2; font-weight: bold;');
+            const index = parseInt(target.dataset.index, 10);
+            console.log(`[1] Click detected on button with index: ${index}`);
+
+            const prompt = generalPrompts[index];
+            if (prompt) {
+                console.log('[2] Successfully retrieved prompt object:', prompt);
+
+                const textarea = getActiveTextarea();
+                console.log('[3] Searching for active textarea element...', textarea);
+
+                if (textarea) {
+                    console.info('[4] SUCCESS: Textarea element found. Proceeding to set value.');
+                    console.log(`   - Text to append: "${prompt.prompt}"`);
+                    setInputValue(textarea, prompt.prompt, true);
+                    console.log('[5] setInputValue function has been executed. Check the input box now.');
+                } else {
+                    console.error('[4] FAILURE: Active textarea element was NOT found.');
+                    console.error('   - This is the most likely cause of the issue.');
+                    console.error(`   - The selector used for this platform was: "${activePlatform.selector}"`);
+                }
+            } else {
+                console.error(`[2] FAILURE: Could not find a prompt object for index ${index}. The 'generalPrompts' array might be out of sync with the UI.`);
+            }
+            console.log('%c------------------------------------', 'color: #3966B2; font-weight: bold;');
         }
     });
 
