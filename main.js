@@ -21,13 +21,13 @@ javascript:(function main() {
 
     /* --- AI平台配置 (已集成自动继续所需的选择器) --- */
     const AI_PLATFORMS = [
-        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-prompt-box textarea', sendButtonSelector: 'ms-run-button button[aria-label="Run"]', stoppableSelector: 'ms-run-button button:has(span.spin)', scrollContainerSelector: '.chat-view-container'},
+        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-chunk-input textarea', sendButtonSelector: 'ms-run-button button[aria-label="Run"]:not([disabled])', stoppableSelector: 'ms-run-button button.stoppable', scrollContainerSelector: '.chat-view-container'},
         {name: 'Gemini', hostname: 'gemini.google.com', selector: 'rich-textarea .ql-editor[contenteditable="true"]', sendButtonSelector: '[aria-label="Send message"]', stoppableSelector: '[aria-label="Stop generating"]', scrollContainerSelector: 'ms-autoscroll-container'},
         {name: 'ChatGPT', hostname: 'chatgpt.com', selector: '#prompt-textarea', sendButtonSelector: 'button[data-testid="send-button"]', stoppableSelector: 'button[aria-label*="Stop"]', scrollContainerSelector: 'main .overflow-y-auto'},
         {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input', sendButtonSelector: 'button[class*="send-btn"]', stoppableSelector: 'button[class*="stop-btn"]', scrollContainerSelector: 'div.custom-scroll-container'},
     ];
 
-    /* --- 元提示词模板：要求AI直接输出JSON (v2.1: 支持自定义数量) --- */
+    /* --- 元提示词模板：要求AI直接输出JSON (v2.1: 支持自定义数量) ---  */
     const META_PROMPT_TEMPLATE = `
 #### **你的身份**
 你是一位顶级的提示词工程师（Prompt Engineering Architect），同时也是一个精准的JSON格式化工具。你的任务是根据我提供的一个特定【领域/主题】，设计一个全面、结构化、多角色的AI助手提示词框架，并**直接以一个完整的JSON对象格式**输出。禁止在JSON代码块前后添加任何解释性文字、开场白或总结。
