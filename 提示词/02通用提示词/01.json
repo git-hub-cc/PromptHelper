@@ -37,7 +37,7 @@
   },
   {
     "name": "09高难度bug：加日志---------------------------",
-    "prompt": "问题依旧，对相关链路添加完整的日志，以便用于分析，输出的日志包含请求参数，返回结果，关键变量的值"
+    "prompt": "问题依旧，对相关链路添加完整的日志，以便用于分析，输出的日志包含请求情况，返回情况，关键变量的值"
   },
   {
     "name": "09高难度bug：给出新方案-----------------------",
@@ -70,5 +70,13 @@
   {
     "name": "16批量：编写python，将输出md写入文件--------",
     "prompt": "编写一个python脚本，读取当前目录下的DEMO.md文件，文件内容与上述代码完全一致，根据代码格式，创建文件，写入代码，生成整个项目"
+  },
+  {
+    "name": "17图标：相似图标--------------------------------",
+    "prompt": "生成5个背景色相同的svg图标，用于笔记软件，最后输出html可以直接预览\n<svg width='64' height='64' viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'>\n<style>\n.bg { fill: url(#logo-gradient); }\n.grad-stop-1 { stop-color: #007ACC; }\n.grad-stop-2 { stop-color: #009688; }\n.bubble { fill: white; fill-opacity: 0.9; }\n.dot-1 { fill: #007ACC; }\n.dot-2 { fill: #009688; }\n\n@media (prefers-color-scheme: dark) {\n.bg { fill: transparent; }\n\n.grad-stop-1, .grad-stop-2 { stop-color: transparent; }\n\n.bubble { fill: #D1D5DB; fill-opacity: 1; }\n\n.dot-1, .dot-2 { fill: #4B5563; }\n}\n</style>\n\n<defs>\n<linearGradient id='logo-gradient' x1='0' y1='0' x2='64' y2='64' gradientUnits='userSpaceOnUse'>\n<stop class='grad-stop-1'/>\n<stop offset='1' class='grad-stop-2'/>\n</linearGradient>\n</defs>\n\n<!-- The visual elements now use classes instead of hardcoded fills -->\n<rect width='64' height='64' rx='12' class='bg'/>\n<path d='M16 20C16 17.7909 17.7909 16 20 16H44C46.2091 16 48 17.7909 48 20V36C48 38.2091 46.2091 40 44 40H32.6667C31.5621 40 30.5044 40.4214 29.7283 41.1975L23.1975 47.7283C22.4214 48.5044 21.3638 48.9258 20.2591 48.9258C19.7828 48.9258 19.3103 48.8085 18.8856 48.5839C17.712 47.9439 17.0393 46.6853 17.1852 45.3853L17.8182 39.5113C17.901 38.7103 17.585 37.915 17.0096 37.3396C16.4342 36.7642 16 35.9689 16 35.1679V20Z' class='bubble'/>\n<circle cx='26' cy='28' r='3' class='dot-1'/>\n<circle cx='38' cy='28' r='3' class='dot-2'/>\n</svg>"
+  },
+  {
+    "name": "18接口：当前的AI接口----------------------------",
+    "prompt": "curl 'https://ppmc.club/webchat/api/v1/chat/completions' \n-H 'accept: /' \n-H 'accept-language: zh-CN,zh;q=0.9' \n-H 'authorization: Bearer sk-xxxx' \n-H 'content-type: application/json' \n-H 'dnt: 1' \n-H 'origin: https://ppmc.club' \n-H 'priority: u=1, i' \n-H 'referer: https://ppmc.club/webchat-vue/' \n-H 'sec-ch-ua: \"Chromium\";v=\"142\", \"Google Chrome\";v=\"142\", \"Not_A Brand\";v=\"99\"' \n-H 'sec-ch-ua-mobile: ?0' \n-H 'sec-ch-ua-platform: \"Windows\"' \n-H 'sec-fetch-dest: empty' \n-H 'sec-fetch-mode: cors' \n-H 'sec-fetch-site: same-origin' \n-H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' \n--data-raw '{\"model\":\"THUDM/GLM-4-32B-0414\",\"messages\":[{\"role\":\"system\",\"content\":\"\"},{\"role\":\"user\",\"content\":\"\"}],\"stream\":true,\"max_tokens\":2048}'"
   }
 ]
