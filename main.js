@@ -21,7 +21,7 @@ javascript:(function main() {
 
     /* --- AI平台配置 (已集成自动继续所需的选择器) --- */
     const AI_PLATFORMS = [
-        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-chunk-input textarea', sendButtonSelector: 'ms-run-button button[aria-label="Run"]:not([disabled])', stoppableSelector: 'ms-run-button button.stoppable', scrollContainerSelector: '.chat-view-container'},
+        {name: 'AIStudio', hostname: 'aistudio.google.com', selector: 'ms-prompt-box textarea', sendButtonSelector: 'ms-run-button button[aria-label="Run"]', stoppableSelector: 'ms-run-button button:has(span.spin)', scrollContainerSelector: '.chat-view-container'},
         {name: 'Gemini', hostname: 'gemini.google.com', selector: 'rich-textarea .ql-editor[contenteditable="true"]', sendButtonSelector: '[aria-label="Send message"]', stoppableSelector: '[aria-label="Stop generating"]', scrollContainerSelector: 'ms-autoscroll-container'},
         {name: 'ChatGPT', hostname: 'chatgpt.com', selector: '#prompt-textarea', sendButtonSelector: 'button[data-testid="send-button"]', stoppableSelector: 'button[aria-label*="Stop"]', scrollContainerSelector: 'main .overflow-y-auto'},
         {name: 'DeepSeek', hostname: 'chat.deepseek.com', selector: 'textarea#chat-input', sendButtonSelector: 'button[class*="send-btn"]', stoppableSelector: 'button[class*="stop-btn"]', scrollContainerSelector: 'div.custom-scroll-container'},
