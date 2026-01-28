@@ -20,10 +20,6 @@
     "prompt": "列出需要修改的文件，本次不输出代码。"
   },
   {
-    "name": "05代码：输出完整代码-单次----------------------",
-    "prompt": "输出完整代码，使用中文注释，良好的外观，良好的鲁棒性，最小侵入，不需要对代码进行说明，因为多次说明后会导致代码混乱。"
-  },
-  {
     "name": "06代码：输出完整代码-多次----------------------",
     "prompt": "输出x个文件的完整代码，使用中文注释，良好的外观，良好的鲁棒性，最小侵入，不需要对代码进行说明，因为多次说明后会导致代码混乱。输出完整代码，因为代码较多，分多次输出，首次说明分几次。"
   },
@@ -78,5 +74,9 @@
   {
     "name": "18接口：当前的AI接口----------------------------",
     "prompt": "curl 'https://ppmc.club/webchat/api/v1/chat/completions' \n-H 'accept: /' \n-H 'accept-language: zh-CN,zh;q=0.9' \n-H 'authorization: Bearer sk-xxxx' \n-H 'content-type: application/json' \n-H 'dnt: 1' \n-H 'origin: https://ppmc.club' \n-H 'priority: u=1, i' \n-H 'referer: https://ppmc.club/webchat-vue/' \n-H 'sec-ch-ua: \"Chromium\";v=\"142\", \"Google Chrome\";v=\"142\", \"Not_A Brand\";v=\"99\"' \n-H 'sec-ch-ua-mobile: ?0' \n-H 'sec-ch-ua-platform: \"Windows\"' \n-H 'sec-fetch-dest: empty' \n-H 'sec-fetch-mode: cors' \n-H 'sec-fetch-site: same-origin' \n-H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' \n--data-raw '{\"model\":\"THUDM/GLM-4-32B-0414\",\"messages\":[{\"role\":\"system\",\"content\":\"\"},{\"role\":\"user\",\"content\":\"\"}],\"stream\":true,\"max_tokens\":2048}'"
+  },
+  {
+    "name": "19重构：对backend目录重构",
+    "prompt": "对backend目录的内容进行重构，要求运用合适的设计模式，提高项目的拓展性与可读性，因为代码较多，分2个阶段，文件数量每个阶段不要超过8个，要求每个阶段项目都可以正常运行。\n给出建议，本次不输出代码"
   }
 ]
