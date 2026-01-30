@@ -1,0 +1,175 @@
+/* Popup 样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 300px;
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #1e1e1e;
+    color: #f0f0f0;
+}
+
+.popup-container {
+    padding: 0;
+}
+
+/* --- 头部 --- */
+.popup-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(0, 122, 204, 0.2), rgba(0, 150, 136, 0.15));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.popup-header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #007ACC, #009688);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* --- 主体 --- */
+.popup-body {
+    padding: 16px 18px;
+}
+
+/* --- 状态 --- */
+.popup-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(55, 58, 64, 0.5);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6b7280;
+}
+
+.popup-status.active .status-dot {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.popup-status.inactive .status-dot {
+    background: #ef4444;
+}
+
+/* --- 统计 --- */
+.popup-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-item {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: rgba(55, 58, 64, 0.4);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stat-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #007ACC, #009688);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-label {
+    display: block;
+    font-size: 11px;
+    color: #a0a4ab;
+    margin-top: 4px;
+}
+
+/* --- 按钮 --- */
+.popup-btn {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #007ACC, #009688);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.popup-btn:hover {
+    filter: brightness(1.12);
+    box-shadow: 0 2px 12px rgba(0, 122, 204, 0.3);
+}
+
+.popup-btn:active {
+    transform: scale(0.98);
+}
+
+.popup-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- 底部 --- */
+.popup-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 18px;
+    font-size: 11px;
+    color: #6b7280;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* --- 浅色主题 --- */
+@media (prefers-color-scheme: light) {
+    body {
+        background: #fafafa;
+        color: #1a1a1a;
+    }
+
+    .popup-header {
+        background: linear-gradient(135deg, rgba(0, 122, 204, 0.08), rgba(0, 150, 136, 0.06));
+        border-bottom-color: rgba(0, 0, 0, 0.06);
+    }
+
+    .popup-status {
+        background: rgba(0, 0, 0, 0.04);
+    }
+
+    .stat-item {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-label {
+        color: #666;
+    }
+
+    .popup-footer {
+        border-top-color: rgba(0, 0, 0, 0.06);
+        color: #999;
+    }
+}

@@ -1,0 +1,66 @@
+{
+    "manifest_version": 3,
+    "name": "PromptHelper - AI 多角色框架助手",
+    "version": "1.0.0",
+    "description": "AI 多角色提示词框架助手，支持 Gemini、ChatGPT、DeepSeek、AIStudio 等平台",
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png"
+        }
+    },
+    "permissions": [
+        "storage",
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://aistudio.google.com/*",
+        "https://gemini.google.com/*",
+        "https://chatgpt.com/*",
+        "https://chat.deepseek.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://aistudio.google.com/*",
+                "https://gemini.google.com/*",
+                "https://chatgpt.com/*",
+                "https://chat.deepseek.com/*"
+            ],
+            "js": [
+                "modules/storage.js",
+                "modules/platform.js",
+                "modules/modal.js",
+                "modules/prompt-engine.js",
+                "ui/tabs.js",
+                "ui/panel.js",
+                "content.js"
+            ],
+            "css": [
+                "content.css"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "prompts/*",
+                "icons/*"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}
