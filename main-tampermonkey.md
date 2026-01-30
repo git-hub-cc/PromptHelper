@@ -64,9 +64,13 @@
         {
         name: 'Gemini',
         hostname: 'gemini.google.com',
+        // 输入框选择器保持不变，匹配 rich-textarea 下的编辑器
         selector: 'rich-textarea .ql-editor[contenteditable="true"]',
-        sendButtonSelector: '[aria-label="Send message"]',
-        stoppableSelector: '[aria-label="Stop generating"]',
+        // 发送按钮：根据提供的 HTML，精确匹配 button 标签和 aria-label
+        sendButtonSelector: 'button[aria-label="Send message"]',
+        // 停止按钮：关键修改。Gemini 现在可能显示 "Stop response" 而不是 "Stop generating"
+        // 使用 *= 模糊匹配 "Stop"，只要 aria-label 包含 Stop 就会被识别为正在生成
+        stoppableSelector: 'button[aria-label*="Stop"]',
         scrollContainerSelector: 'ms-autoscroll-container'
         },
         {
