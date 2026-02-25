@@ -2,7 +2,7 @@
  * ModalManager - 模态弹窗系统
  * 提供统一的模态弹窗创建、关闭和事件处理
  */
-const ModalManager = (() => {
+var ModalManager = (() => {
 
     /**
      * 显示模态弹窗

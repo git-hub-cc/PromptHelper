@@ -2,7 +2,7 @@
  * TabManager - 标签页系统
  * 管理角色标签、通用指令标签和提示词目录标签的切换与渲染
  */
-const TabManager = (() => {
+var TabManager = (() => {
     /* --- 状态 --- */
     let _activeTab = 'framework'; // 'framework' | 'general' | 'catalog'
     let _activeRoleIndex = 0;
@@ -55,6 +55,9 @@ const TabManager = (() => {
      * @param {HTMLElement} container - 标签容器
      */
     const bindEvents = (container) => {
+        if (!container || container.dataset.gphTabBound) return;
+        container.dataset.gphTabBound = 'true';
+
         container.addEventListener('click', (e) => {
             const tab = e.target.closest('.gph-tab');
             if (!tab) return;

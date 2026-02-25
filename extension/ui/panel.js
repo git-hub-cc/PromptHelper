@@ -2,7 +2,7 @@
  * PanelUI - 悬浮面板 UI 主模块
  * 负责面板渲染、框架管理、编辑弹窗、事件处理
  */
-const PanelUI = (() => {
+var PanelUI = (() => {
     const PANEL_ID = 'gph-ext-panel';
     const esc = PlatformAdapter.escapeHTML;
 
@@ -100,7 +100,6 @@ const PanelUI = (() => {
         }
 
         PlatformAdapter.setSafeHTML(bodyEl, tabsHTML + contentHTML);
-        TabManager.bindEvents(bodyEl);
     };
 
     /* --- 框架模式内容渲染 --- */
@@ -155,15 +154,31 @@ const PanelUI = (() => {
 
     /* --- 工具栏可见性 --- */
     const _updateToolbarVisibility = (tab) => {
-        const fwControls = ['#gph-new-framework-btn', '#gph-paste-json-btn', '#gph-manage-framework-btn', '#gph-combine-send-btn'];
         const isFramework = tab === 'framework';
+        const hasNoFrameworks = frameworks.length === 0;
+
+        // 框架管理按钮：在框架标签页 OR 没有任何框架时显示
+        const fwControls = ['#gph-new-framework-btn', '#gph-paste-json-btn', '#gph-manage-framework-btn'];
         fwControls.forEach(sel => {
             const el = panelEl.querySelector(sel);
-            if (el) el.style.display = isFramework ? '' : 'none';
+            if (el) el.style.display = (isFramework || hasNoFrameworks) ? '' : 'none';
         });
-        selectorEl.style.display = isFramework ? '' : 'none';
+
+        // 选择器：在框架标签页 OR 没有任何框架时显示（显示“无可用框架”）
+        if (selectorEl) {
+            selectorEl.style.display = (isFramework || hasNoFrameworks) ? '' : 'none';
+        }
+
+        // 组合并发送：仅在框架标签页且有框架时显示
+        const combineBtn = panelEl.querySelector('#gph-combine-send-btn');
+        if (combineBtn) {
+            combineBtn.style.display = (isFramework && !hasNoFrameworks) ? '' : 'none';
+        }
+
         const manageGenBtn = panelEl.querySelector('#gph-manage-general-btn');
-        if (manageGenBtn) manageGenBtn.style.display = (tab === 'general') ? '' : 'none';
+        if (manageGenBtn) {
+            manageGenBtn.style.display = (tab === 'general') ? '' : 'none';
+        }
     };
 
     /* --- 更新框架选择器 --- */
@@ -183,6 +198,7 @@ const PanelUI = (() => {
     /* --- 事件绑定 --- */
     const _bindEvents = () => {
         TabManager.onTabChange((tab, roleIndex) => render());
+        TabManager.bindEvents(bodyEl);
 
         panelEl.addEventListener('click', async (e) => {
             const target = e.target.closest('button');

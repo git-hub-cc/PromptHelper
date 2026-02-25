@@ -2,7 +2,7 @@
  * StorageManager - 统一存储管理模块
  * 封装 chrome.storage.sync/local，提供框架和提示词的 CRUD 操作
  */
-const StorageManager = (() => {
+var StorageManager = (() => {
     /* --- 存储键名 --- */
     const KEYS = {
         FRAMEWORKS: 'gph_frameworks_v3',

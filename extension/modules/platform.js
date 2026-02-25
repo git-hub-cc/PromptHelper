@@ -2,7 +2,7 @@
  * PlatformAdapter - AI 平台适配器模块
  * 统一处理不同 AI 平台的 DOM 差异，提供跨平台输入/发送功能
  */
-const PlatformAdapter = (() => {
+var PlatformAdapter = (() => {
     /* --- AI 平台配置表 --- */
     const PLATFORMS = [
         {

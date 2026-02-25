@@ -1,25 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PromptHelper</title>
     <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
     <div class="popup-container">
         <div class="popup-header">
             <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs><linearGradient id="plg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-                    <stop stop-color="#007ACC"/><stop offset="1" stop-color="#009688"/>
-                </linearGradient></defs>
-                <rect width="64" height="64" rx="12" fill="url(#plg)"/>
+                <defs>
+                    <linearGradient id="plg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#007ACC" />
+                        <stop offset="1" stop-color="#009688" />
+                    </linearGradient>
+                </defs>
+                <rect width="64" height="64" rx="12" fill="url(#plg)" />
                 <g fill="white" fill-opacity="0.9">
-                    <rect x="30" y="38" width="4" height="8" rx="2"/>
-                    <rect x="22.5" y="27" width="8" height="4" rx="2" transform="rotate(-60 26.5 29)"/>
-                    <rect x="33.5" y="27" width="8" height="4" rx="2" transform="rotate(60 37.5 29)"/>
-                    <circle cx="32" cy="50" r="6"/><circle cx="18" cy="26" r="6"/><circle cx="46" cy="26" r="6"/>
-                    <path d="M32 28 L37.2 31 L37.2 37 L32 40 L26.8 37 L26.8 31 Z"/>
+                    <rect x="30" y="38" width="4" height="8" rx="2" />
+                    <rect x="22.5" y="27" width="8" height="4" rx="2" transform="rotate(-60 26.5 29)" />
+                    <rect x="33.5" y="27" width="8" height="4" rx="2" transform="rotate(60 37.5 29)" />
+                    <circle cx="32" cy="50" r="6" />
+                    <circle cx="18" cy="26" r="6" />
+                    <circle cx="46" cy="26" r="6" />
+                    <path d="M32 28 L37.2 31 L37.2 37 L32 40 L26.8 37 L26.8 31 Z" />
                 </g>
             </svg>
             <h1>PromptHelper</h1>
@@ -43,7 +50,7 @@
             </div>
 
             <button id="toggle-panel-btn" class="popup-btn">
-                <span>📋</span> 打开面板
+                <span>📋</span> 打开/关闭面板
             </button>
         </div>
 
@@ -54,4 +61,5 @@
     </div>
     <script src="popup.js"></script>
 </body>
+
 </html>

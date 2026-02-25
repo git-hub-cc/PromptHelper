@@ -2,7 +2,7 @@
  * PromptEngine - 提示词引擎模块
  * 管理元提示词模板、框架组合发送、自动继续功能
  */
-const PromptEngine = (() => {
+var PromptEngine = (() => {
     /* --- 元提示词模板（运行时从文件加载或使用内嵌默认值） --- */
     let _metaTemplate = '';
 
