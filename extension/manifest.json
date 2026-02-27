@@ -44,6 +44,9 @@
                 "modules/prompt-engine.js",
                 "ui/tabs.js",
                 "ui/panel.js",
+                "ui/panel-framework.js",
+                "ui/panel-actions.js",
+                "ui/toolbar-inject.js",
                 "content.js"
             ],
             "css": [

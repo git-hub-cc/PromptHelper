@@ -111,19 +111,52 @@ var PlatformAdapter = (() => {
     /** 获取输入框内容 */
     const getInputValue = (element) => {
         if (!element) return '';
-        return element.isContentEditable ? element.innerText : element.value;
+        if (element.isContentEditable) {
+            let text = '';
+            for (const child of element.childNodes) {
+                if (child.nodeName === 'P' || child.nodeName === 'DIV') {
+                    // Check if paragraph is just an empty line <p><br></p>
+                    if (child.childNodes.length === 1 && child.firstChild.nodeName === 'BR') {
+                        text += '\n';
+                    } else {
+                        text += child.innerText + '\n';
+                    }
+                } else if (child.nodeName === 'BR') {
+                    // In some edge cases top level BRs
+                    text += '\n';
+                } else if (child.nodeType === Node.TEXT_NODE) {
+                    text += child.textContent;
+                } else {
+                    text += child.innerText || child.textContent;
+                }
+            }
+            // Remove ONLY the final implicitly added newline
+            if (text.endsWith('\n')) {
+                text = text.slice(0, -1);
+            }
+            return text;
+        }
+        return element.value;
     };
 
     /** 设置输入框内容 */
     const setInputValue = (element, value, append = false) => {
         const currentContent = append ? getInputValue(element) : '';
-        const newContent = append ? `${currentContent}\n${value}`.trim() : value;
+        const newContent = append ? (currentContent ? `${currentContent}\n${value}` : value) : value;
 
         if (element.isContentEditable) {
-            const lines = newContent.split('\n').map(
-                line => `<p>${escapeHTML(line) || '<br>'}</p>`
-            ).join('');
-            setSafeHTML(element, lines);
+            const lines = newContent.split('\n');
+            const htmlParts = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                // Empty lines become <p><br></p>
+                if (line.trim() === '') {
+                    htmlParts.push('<p><br></p>');
+                } else {
+                    htmlParts.push(`<p>${escapeHTML(line)}</p>`);
+                }
+            }
+            setSafeHTML(element, htmlParts.join(''));
         } else {
             element.value = newContent;
         }

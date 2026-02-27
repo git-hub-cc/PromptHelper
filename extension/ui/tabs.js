@@ -20,6 +20,9 @@ var TabManager = (() => {
     /** 设置角色索引 */
     const setActiveRoleIndex = (index) => { _activeRoleIndex = index; };
 
+    /** 设置当前激活标签 */
+    const setActiveTab = (tab) => { _activeTab = tab; };
+
     /**
      * 渲染标签栏 HTML
      * @param {Array} roles - 角色列表
@@ -134,6 +137,7 @@ var TabManager = (() => {
         getActiveTab,
         getActiveRoleIndex,
         setActiveRoleIndex,
+        setActiveTab,
         renderTabs,
         bindEvents,
         renderGeneralPanel,

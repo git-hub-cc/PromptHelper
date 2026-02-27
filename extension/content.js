@@ -11,10 +11,15 @@
         return;
     }
 
+    /* --- Gemini 平台工具栏按钮（基于 hostname，早期注入，无需等待面板） --- */
+    if (window.location.hostname.includes('gemini.google.com')) {
+        ToolbarInjector.init();
+    }
+
     /* --- 检测当前平台 --- */
     const platform = PlatformAdapter.detect();
     if (!platform) {
-        console.log('[GPH] 未检测到支持的 AI 平台');
+        console.log('[GPH] 未检测到支持的 AI 平台（输入框未就绪）');
         return;
     }
     console.log(`[GPH] 已检测到平台: ${platform.name}`);
