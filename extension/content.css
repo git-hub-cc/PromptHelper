@@ -835,6 +835,12 @@
     color: var(--gem-sys-color--on-secondary-container, #007ACC);
 }
 
+#gph-helper-toolbar-btn.gph-helper-btn-running {
+    background-color: var(--gem-sys-color--tertiary-container, rgba(0, 150, 136, 0.15));
+    color: var(--gem-sys-color--on-tertiary-container, #009688);
+    animation: gph-pulse 2s infinite;
+}
+
 .gph-helper-btn-label {
     letter-spacing: 0.1px;
 }

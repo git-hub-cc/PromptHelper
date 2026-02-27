@@ -51,14 +51,6 @@
         }
     });
 
-    /* --- 监听来自 background.js 的消息 --- */
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.action === 'toggle-panel') {
-            PanelUI.toggle();
-            sendResponse({ visible: PanelUI.isVisible() });
-        }
-        return true;
-    });
 
     console.log('[GPH] PromptHelper 插件初始化完成');
 })();

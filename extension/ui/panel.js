@@ -232,6 +232,10 @@ var PanelUI = (() => {
             const counter = _PHS.panelEl.querySelector('#gph-continue-counter');
             if (btn) btn.firstChild.textContent = running ? '停止' : '自动继续';
             if (counter) counter.textContent = running ? `(${count})` : '';
+
+            if (typeof ToolbarInjector !== 'undefined') {
+                ToolbarInjector.updateAutoContinueStatus(running, count);
+            }
         });
     };
 

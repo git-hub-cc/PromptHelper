@@ -5,7 +5,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const statusEl = document.getElementById('popup-status');
     const statusText = document.getElementById('status-text');
-    const toggleBtn = document.getElementById('toggle-panel-btn');
     const statFrameworks = document.getElementById('stat-frameworks');
     const statPrompts = document.getElementById('stat-prompts');
 
@@ -33,48 +32,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isSupported) {
             statusEl.className = 'popup-status active';
             statusText.textContent = `已连接: ${url.hostname.split('.')[0]}`;
-            toggleBtn.disabled = false;
         } else {
             statusEl.className = 'popup-status inactive';
             statusText.textContent = '当前页面不是支持的 AI 平台';
-            toggleBtn.disabled = true;
         }
     } catch (e) {
         statusEl.className = 'popup-status inactive';
         statusText.textContent = '无法检测当前页面';
-        toggleBtn.disabled = true;
     }
 
-    /* --- 切换面板按钮 --- */
-    toggleBtn.addEventListener('click', async () => {
-        try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab?.id) return;
 
-            try {
-                await chrome.tabs.sendMessage(tab.id, { action: 'toggle-panel' });
-            } catch (e) {
-                /* --- 首次点击时注入 content script --- */
-                await chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    files: [
-                        'modules/storage.js',
-                        'modules/platform.js',
-                        'modules/modal.js',
-                        'modules/prompt-engine.js',
-                        'ui/tabs.js',
-                        'ui/panel.js',
-                        'content.js'
-                    ]
-                });
-                await chrome.scripting.insertCSS({
-                    target: { tabId: tab.id },
-                    files: ['content.css']
-                });
-            }
-            window.close();
-        } catch (err) {
-            console.error('[GPH Popup] 操作失败:', err);
-        }
-    });
 });

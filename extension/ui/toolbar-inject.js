@@ -44,12 +44,11 @@ var ToolbarInjector = (() => {
 
         const btnRect = _btnEl.getBoundingClientRect();
         const panelW = panelEl.offsetWidth || 560;
+        // 如果面板之前被 max-height 压扁了，offsetHeight 会偏小，但用来判断当前状态够用了
         const panelH = panelEl.offsetHeight || 400;
         const vw = window.innerWidth;
         const vh = window.innerHeight;
 
-        // 默认在按钮正下方
-        let top = btnRect.bottom + PANEL_GAP;
         let left = btnRect.left;
 
         // 右侧超出屏幕，向左移
@@ -60,16 +59,39 @@ var ToolbarInjector = (() => {
         panelEl.style.left = `${Math.max(8, left)}px`;
         panelEl.style.right = 'auto';
 
-        // 下方空间不足，改为按钮上方
-        if (top + panelH > vh - 8) {
-            // 面板在按钮上方，通过 bottom 固定与按钮的距离
-            // 让浏览器顶部视野自然截断面板，不强行将面板下压挡住按钮
+        const spaceBelow = vh - btnRect.bottom - PANEL_GAP - 8;
+        const spaceAbove = btnRect.top - PANEL_GAP - 8;
+
+        // 如果下方放不下（或者说高度不足），并且上方空间比下方大，则放到上方
+        let isBelow = true;
+        if (spaceBelow < panelH && spaceAbove > spaceBelow) {
+            isBelow = false;
+        }
+
+        const availableHeight = isBelow ? spaceBelow : spaceAbove;
+
+        // 覆盖 CSS 的 min-height: 200px 限制，允许面板在窗口极小时缩得更小
+        // 否则 maxHeight 被设为比 minHeight 小的值时会溢出并导致遮挡
+        panelEl.style.minHeight = '140px';
+
+        if (isBelow) {
+            // 面板在按钮下方
+            panelEl.style.top = `${btnRect.bottom + PANEL_GAP}px`;
+            panelEl.style.bottom = 'auto';
+            panelEl.style.maxHeight = `${availableHeight}px`;
+        } else {
+            // 面板在按钮上方
             panelEl.style.top = 'auto';
             panelEl.style.bottom = `${vh - btnRect.top + PANEL_GAP}px`;
-        } else {
-            // 面板在按钮正下方
-            panelEl.style.top = `${top}px`;
-            panelEl.style.bottom = 'auto';
+            panelEl.style.maxHeight = `${availableHeight}px`;
+        }
+
+        // 修正用户拖拽定义的过大 height，不然面板可能因为定死高度被隐藏或超出
+        if (panelEl.style.height) {
+            const currentHeight = parseInt(panelEl.style.height);
+            if (currentHeight > availableHeight) {
+                panelEl.style.height = `${availableHeight}px`;
+            }
         }
     };
 
@@ -189,5 +211,20 @@ var ToolbarInjector = (() => {
         if (_btnEl) _btnEl.classList.remove('gph-helper-btn-active');
     };
 
-    return { init, onPanelClose };
+    /* --- 更新 Helper 按钮倒计时状态 --- */
+    const updateAutoContinueStatus = (running, count) => {
+        if (!_btnEl) return;
+        const labelEl = _btnEl.querySelector('.gph-helper-btn-label');
+        if (!labelEl) return;
+
+        if (running && count > 0) {
+            labelEl.textContent = `Helper (${count})`;
+            _btnEl.classList.add('gph-helper-btn-running');
+        } else {
+            labelEl.textContent = 'Helper';
+            _btnEl.classList.remove('gph-helper-btn-running');
+        }
+    };
+
+    return { init, onPanelClose, updateAutoContinueStatus };
 })();
