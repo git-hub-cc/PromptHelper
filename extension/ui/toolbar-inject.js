@@ -93,6 +93,26 @@ var ToolbarInjector = (() => {
                 panelEl.style.height = `${availableHeight}px`;
             }
         }
+
+        // 保存位置状态（如果需要的话，不过在这里主要是为了重定位）
+        // 如果是 ToolbarInjector 定位的，就不保存到长期存储，除非用户手动拖拽了
+    };
+
+    /** 智能重新定位：检查按钮是否移动了 */
+    let _lastBtnRect = null;
+    const _startRepositionLoop = () => {
+        if (window._gphRepositionInterval) return;
+
+        window._gphRepositionInterval = setInterval(() => {
+            const panelEl = document.getElementById('gph-ext-panel');
+            if (!panelEl || panelEl.style.display === 'none' || !_btnEl) return;
+
+            const rect = _btnEl.getBoundingClientRect();
+            if (!_lastBtnRect || rect.top !== _lastBtnRect.top || rect.left !== _lastBtnRect.left) {
+                _positionPanelNearButton();
+                _lastBtnRect = rect;
+            }
+        }, 1000); // 每一秒检查一次，平衡性能和响应速度
     };
 
     /* --- 确保面板已初始化（懒加载） --- */
@@ -156,9 +176,14 @@ var ToolbarInjector = (() => {
             panelEl.style.display = 'flex';
             _positionPanelNearButton();
             _btnEl.classList.add('gph-helper-btn-active');
+            _startRepositionLoop();
         } else {
             panelEl.style.display = 'none';
             _btnEl.classList.remove('gph-helper-btn-active');
+            if (window._gphRepositionInterval) {
+                clearInterval(window._gphRepositionInterval);
+                window._gphRepositionInterval = null;
+            }
         }
     };
 

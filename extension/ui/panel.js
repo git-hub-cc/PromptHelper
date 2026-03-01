@@ -71,6 +71,7 @@ var PanelUI = (() => {
         _PHS.selectorEl = _PHS.panelEl.querySelector('#gph-framework-selector');
 
         _setupTopResize();
+        _setupDragging();
         _bindEvents();
         _restorePanelState();
     };
@@ -267,19 +268,66 @@ var PanelUI = (() => {
         });
     };
 
+    /** 面板整体拖拽移动 */
+    const _setupDragging = () => {
+        const header = _PHS.panelEl.querySelector('#gph-header');
+        if (!header) return;
+
+        header.addEventListener('mousedown', (e) => {
+            // 如果点击的是按钮则不触发拖拽
+            if (e.target.closest('button')) return;
+            
+            e.preventDefault();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startLeft = _PHS.panelEl.offsetLeft;
+            const startTop = _PHS.panelEl.offsetTop;
+
+            const onMove = (ev) => {
+                const dx = ev.clientX - startX;
+                const dy = ev.clientY - startY;
+                
+                _PHS.panelEl.style.left = `${startLeft + dx}px`;
+                _PHS.panelEl.style.top = `${startTop + dy}px`;
+                _PHS.panelEl.style.right = 'auto';
+                _PHS.panelEl.style.bottom = 'auto';
+            };
+
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                _savePanelState();
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    };
+
 
 
     /* --- 面板状态持久化 --- */
     const _savePanelState = () => {
         StorageManager.savePanelState({
-            left: _PHS.panelEl.style.left, top: _PHS.panelEl.style.top,
-            width: _PHS.panelEl.style.width, height: _PHS.panelEl.style.height
+            left: _PHS.panelEl.style.left, 
+            top: _PHS.panelEl.style.top,
+            right: _PHS.panelEl.style.right,
+            bottom: _PHS.panelEl.style.bottom,
+            width: _PHS.panelEl.style.width, 
+            height: _PHS.panelEl.style.height
         });
     };
 
     const _restorePanelState = async () => {
         const state = await StorageManager.loadPanelState();
-        if (state) Object.assign(_PHS.panelEl.style, state);
+        if (state) {
+            // 清理旧状态，防止冲突
+            _PHS.panelEl.style.left = '';
+            _PHS.panelEl.style.top = '';
+            _PHS.panelEl.style.right = '';
+            _PHS.panelEl.style.bottom = '';
+            Object.assign(_PHS.panelEl.style, state);
+        }
     };
 
     /** 切换面板显示/隐藏 */
