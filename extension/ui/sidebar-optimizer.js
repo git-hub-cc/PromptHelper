@@ -43,17 +43,21 @@ var SidebarOptimizer = (() => {
                 height: 48px !important; /* 锁定操作按钮高度，防止随列表扩展而偏移 */
                 top: 0 !important;
             }
+            .conversation-items-container:hover .gph-conv-toggle-btn {
+                visibility: visible;
+            }
             .gph-conv-toggle-btn {
+                visibility: hidden;
                 background: transparent;
                 border: none;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 32px;
-                height: 32px;
+                width: 28px;
+                height: 28px;
                 border-radius: 50%;
-                color: var(--gem-sys-color--on-surface-variant, #c4c7c5);
+                color: var(--gem-sys-color--on-surface);
                 transition: background-color 0.2s;
             }
             .gph-conv-toggle-btn:hover {
@@ -110,6 +114,15 @@ var SidebarOptimizer = (() => {
             }
             .gph-msg-item:active {
                 background: rgba(255,255,255,0.12);
+            }
+            @keyframes gph-pulse {
+                0% { background-color: rgba(0, 122, 204, 0); }
+                50% { background-color: rgba(0, 122, 204, 0.4); }
+                100% { background-color: rgba(0, 122, 204, 0); }
+            }
+            .gph-highlight-pulse {
+                animation: gph-pulse 1s ease-in-out 2;
+                border-radius: 8px;
             }
         `;
         document.head.appendChild(style);
@@ -186,19 +199,32 @@ var SidebarOptimizer = (() => {
                 e.stopPropagation();
                 
                 const currentConvId = _extractConvId(window.location.href);
-                const targetConvId = _extractConvId(container.parentElement.querySelector('a').href);
+                const parent = container.closest('.conversation-items-container') || container.parentElement;
+                const link = parent.querySelector('a');
+                if (!link) return;
+                
+                const targetConvId = _extractConvId(link.href);
                 
                 if (currentConvId === targetConvId) {
                     _jumpToMessage(idx);
                 } else {
-                    // 如果不是当前会话，先点击父级 a 标签进行导航
-                    const link = container.parentElement.querySelector('a');
                     if (link) {
                         link.click();
-                        // 导航后由于页面刷新/组件重载，较难直接跳转，这里通过提示告知用户
                         console.log('[GPH] 正在切换会话...');
-                        // 尝试在加载后跳转（视情况而定，这里简单处理）
-                        setTimeout(() => _jumpToMessage(idx), 2000);
+                        
+                        // 循环检查是否加载完成并跳转
+                        let attempts = 0;
+                        const checkAndJump = setInterval(() => {
+                            const newConvId = _extractConvId(window.location.href);
+                            if (newConvId === targetConvId) {
+                                const userQueries = document.querySelectorAll(PlatformAdapter.getActive()?.userMessageSelector || '.query-content');
+                                if (userQueries.length > 0) {
+                                    clearInterval(checkAndJump);
+                                    setTimeout(() => _jumpToMessage(idx), 500);
+                                }
+                            }
+                            if (++attempts > 20) clearInterval(checkAndJump);
+                        }, 500);
                     }
                 }
             };
@@ -272,16 +298,29 @@ var SidebarOptimizer = (() => {
         const platform = PlatformAdapter.getActive() || PlatformAdapter.detect();
         if (!platform || !platform.userMessageSelector) return;
 
-        const userQueries = document.querySelectorAll(platform.userMessageSelector);
-        if (userQueries[index]) {
-            userQueries[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // 可以加个高亮效果
-            const originalBg = userQueries[index].style.backgroundColor;
-            userQueries[index].style.backgroundColor = 'rgba(0, 122, 204, 0.2)';
-            setTimeout(() => {
-                userQueries[index].style.backgroundColor = originalBg;
-            }, 2000);
-        }
+        const performJump = () => {
+            const userQueries = document.querySelectorAll(platform.userMessageSelector);
+            const target = userQueries[index];
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // 添加视觉反馈
+                target.classList.add('gph-highlight-pulse');
+                setTimeout(() => {
+                    target.classList.remove('gph-highlight-pulse');
+                }, 2000);
+                
+                // 再次校验位置（针对某些动态高度加载的情况）
+                setTimeout(() => {
+                    const rect = target.getBoundingClientRect();
+                    if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 1000);
+            }
+        };
+
+        performJump();
     };
 
     /** 从 URL 提取会话 ID */
