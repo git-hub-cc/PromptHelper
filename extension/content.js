@@ -14,6 +14,7 @@
     /* --- Gemini 平台工具栏按钮（基于 hostname，早期注入，无需等待面板） --- */
     if (window.location.hostname.includes('gemini.google.com')) {
         ToolbarInjector.init();
+        CodeBlockFolder.init();
     }
 
     /* --- 检测当前平台 --- */

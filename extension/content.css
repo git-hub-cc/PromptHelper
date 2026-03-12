@@ -845,3 +845,58 @@
 .gph-helper-btn-label {
     letter-spacing: 0.1px;
 }
+
+/* ==========================================
+ * 代码块折叠
+ * ========================================== */
+.code-block-decoration .buttons {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.gph-code-collapse-btn {
+    margin-right: 4px;
+    opacity: 0.7 !important;
+    transition: var(--transition);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    color: var(--gem-sys-color--on-surface-variant, inherit) !important;
+}
+
+.gph-code-collapse-btn:hover {
+    opacity: 1 !important;
+    background: var(--bg-hover) !important;
+}
+
+.gph-code-collapse-btn mat-icon {
+    font-size: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* 折叠状态下的整体容器样式 */
+code-block.gph-code-collapsed {
+    border: 1px solid var(--gem-sys-color--outline-variant, rgba(255, 255, 255, 0.1)) !important;
+    border-radius: var(--radius-sm) !important;
+    margin-bottom: 12px !important;
+    overflow: hidden;
+    background: var(--gem-sys-color--surface-container-low, rgba(0, 0, 0, 0.05)) !important;
+    display: block !important;
+    unicode-bidi: isolate;
+}
+
+code-block.gph-code-collapsed .code-block-decoration {
+    border-bottom: none !important;
+    position: static !important; /* 折叠时不使用 sticky，防止遮挡 */
+    background: transparent !important;
+    min-height: var(--gem-sys-spacing--xxl, 40px) !important;
+}
+
+/* 增加展开后的底部过渡 */
+code-block:not(.gph-code-collapsed) {
+    border-bottom: 1px solid var(--gem-sys-color--outline-variant, transparent);
+    transition: border-bottom 0.3s ease;
+}
+
+

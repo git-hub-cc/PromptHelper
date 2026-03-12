@@ -47,6 +47,7 @@
                 "ui/panel-framework.js",
                 "ui/panel-actions.js",
                 "ui/toolbar-inject.js",
+                "ui/code-block-header.js",
                 "content.js"
             ],
             "css": [
