@@ -6,63 +6,52 @@
 var PanelActionHandlers = (() => {
     const esc = PlatformAdapter.escapeHTML;
 
-    /* --- 管理通用提示词 --- */
-    const handleManageGeneral = () => {
-        const editPrompt = (idx = -1) => {
-            const isEdit = idx > -1;
-            const p = isEdit ? _PHS.generalPrompts[idx] : { name: '', prompt: '' };
-            ModalManager.show({
-                title: isEdit ? '编辑通用指令' : '新增通用指令',
-                contentHTML: `<label>名称:</label><input type="text" id="gph-pn" value="${esc(p.name)}">
-                    <label>内容:</label><textarea id="gph-pc" rows="6">${esc(p.prompt)}</textarea>`,
-                confirmText: '保存',
-                onConfirm: async (m, close) => {
-                    const name = m.querySelector('#gph-pn').value.trim();
-                    const content = m.querySelector('#gph-pc').value.trim();
-                    if (!name || !content) return;
-                    if (isEdit) _PHS.generalPrompts[idx] = { name, prompt: content };
-                    else _PHS.generalPrompts.push({ name, prompt: content });
-                    await StorageManager.saveGeneralPrompts(_PHS.generalPrompts);
-                    close();
-                    handleManageGeneral();
-                    PanelUI.render();
+    /* --- 目录管理: 编辑/新增 --- */
+    const _editCatalogPrompt = (idx = -1) => {
+        const isEdit = idx > -1;
+        const p = isEdit ? _PHS.catalogPrompts[idx] : { name: '', prompt: '' };
+        ModalManager.show({
+            title: isEdit ? '编辑提示词' : '新增提示词',
+            contentHTML: `
+                <label>名称:</label><input type="text" id="gph-pn" value="${esc(p.name)}">
+                <label>内容:</label><textarea id="gph-pc" rows="10">${esc(p.prompt)}</textarea>`,
+            confirmText: '保存',
+            onConfirm: async (m, close) => {
+                const name = m.querySelector('#gph-pn').value.trim();
+                const content = m.querySelector('#gph-pc').value.trim();
+                if (!name || !content) return;
+                
+                if (isEdit) {
+                    _PHS.catalogPrompts[idx] = { name, prompt: content };
+                } else {
+                    _PHS.catalogPrompts.unshift({ name, prompt: content }); // 新增的放前面
                 }
-            });
-        };
-
-        const listHTML = () => {
-            if (_PHS.generalPrompts.length === 0) return '<p>没有通用指令。</p>';
-            return `<ul class="gph-manage-list">${_PHS.generalPrompts.map((p, i) =>
-                `<li class="gph-manage-item" data-index="${i}">
-                    <span class="gph-manage-name">${esc(p.name)}</span>
-                    <div class="gph-manage-actions">
-                        <button class="gph-btn gph-btn-sm gph-edit-gp">编辑</button>
-                        <button class="gph-btn gph-btn-sm gph-btn-danger gph-del-gp">删除</button>
-                    </div></li>`).join('')}</ul>`;
-        };
-
-        const modal = ModalManager.show({
-            title: '管理通用指令',
-            contentHTML: `${listHTML()}<div style="text-align:right;margin-top:16px"><button id="gph-add-gp" class="gph-btn gph-btn-primary">新增指令</button></div>`,
-            showCancel: false, confirmText: '关闭',
-            onConfirm: (_m, close) => close()
-        });
-
-        modal.querySelector('#gph-modal-body').addEventListener('click', async (e) => {
-            if (e.target.closest('#gph-add-gp')) { editPrompt(); return; }
-            const item = e.target.closest('.gph-manage-item');
-            if (!item) return;
-            const idx = parseInt(item.dataset.index);
-            if (e.target.closest('.gph-edit-gp')) editPrompt(idx);
-            else if (e.target.closest('.gph-del-gp')) {
-                ModalManager.confirm('确认删除', `删除 "${esc(_PHS.generalPrompts[idx].name)}"？`, async () => {
-                    _PHS.generalPrompts.splice(idx, 1);
-                    await StorageManager.saveGeneralPrompts(_PHS.generalPrompts);
-                    PlatformAdapter.setSafeHTML(modal.querySelector('#gph-modal-body'),
-                        `${listHTML()}<div style="text-align:right;margin-top:16px"><button id="gph-add-gp" class="gph-btn gph-btn-primary">新增指令</button></div>`);
-                    PanelUI.render();
-                });
+                
+                await StorageManager.saveCatalogPrompts(_PHS.catalogPrompts);
+                close();
+                PanelUI.render();
             }
+        });
+    };
+
+    const handleCatalogAdd = () => {
+        _editCatalogPrompt();
+    };
+
+    const handleCatalogEdit = (btn) => {
+        const idx = parseInt(btn.dataset.index);
+        _editCatalogPrompt(idx);
+    };
+
+    const handleCatalogDelete = (btn) => {
+        const idx = parseInt(btn.dataset.index);
+        const p = _PHS.catalogPrompts[idx];
+        if (!p) return;
+
+        ModalManager.confirm('确认删除', `确定要删除提示词 "${esc(p.name)}" 吗？`, async () => {
+            _PHS.catalogPrompts.splice(idx, 1);
+            await StorageManager.saveCatalogPrompts(_PHS.catalogPrompts);
+            PanelUI.render();
         });
     };
 
@@ -96,15 +85,6 @@ var PanelActionHandlers = (() => {
         PromptEngine.startAutoContinue(n);
     };
 
-    /* --- 通用提示词按钮点击 --- */
-    const handleGeneralPromptClick = (btn) => {
-        const idx = parseInt(btn.dataset.index);
-        const prompt = _PHS.generalPrompts[idx];
-        if (!prompt) return;
-        const textarea = PlatformAdapter.getTextarea();
-        if (textarea) PlatformAdapter.setInputValue(textarea, prompt.prompt, true);
-    };
-
     /* --- 提示词目录使用 --- */
     const handleCatalogUse = (btn) => {
         const idx = parseInt(btn.dataset.index);
@@ -115,10 +95,11 @@ var PanelActionHandlers = (() => {
     };
 
     return {
-        handleManageGeneral,
+        handleCatalogAdd,
+        handleCatalogEdit,
+        handleCatalogDelete,
         handleCombineSend,
         handleAutoContinue,
-        handleGeneralPromptClick,
         handleCatalogUse
     };
 })();

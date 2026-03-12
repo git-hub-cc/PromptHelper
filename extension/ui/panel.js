@@ -11,7 +11,6 @@
  * ============================================================ */
 var _PHS = {
     frameworks: [],
-    generalPrompts: [],
     catalogPrompts: [],
     activeFrameworkIndex: 0,
     panelEl: null,
@@ -54,7 +53,6 @@ var PanelUI = (() => {
                 <button id="gph-new-framework-btn" class="gph-btn gph-btn-primary" title="生成元提示词">+</button>
                 <button id="gph-paste-json-btn" class="gph-btn gph-btn-secondary" title="粘贴JSON创建框架">粘贴JSON</button>
                 <button id="gph-manage-framework-btn" class="gph-btn gph-btn-secondary">管理框架</button>
-                <button id="gph-manage-general-btn" class="gph-btn gph-btn-secondary">管理通用</button>
             </div>
             <div id="gph-body"></div>
             <div id="gph-footer">
@@ -79,14 +77,20 @@ var PanelUI = (() => {
     /* --- 加载数据 --- */
     const loadData = async () => {
         _PHS.frameworks = await StorageManager.loadFrameworks();
-        _PHS.generalPrompts = await StorageManager.loadGeneralPrompts();
+        _PHS.catalogPrompts = await StorageManager.loadCatalogPrompts();
         _PHS.activeFrameworkIndex = _PHS.frameworks.length > 0 ? 0 : -1;
 
-        try {
-            const url = chrome.runtime.getURL('prompts/catalog_prompts.json');
-            const res = await fetch(url);
-            if (res.ok) _PHS.catalogPrompts = await res.json();
-        } catch (e) { console.warn('[GPH] 加载提示词目录失败'); }
+        // 如果持久化目录为空，尝试加载内置作为初始值（initDefaults 也会处理，这里是兜底）
+        if (_PHS.catalogPrompts.length === 0) {
+            try {
+                const url = chrome.runtime.getURL('prompts/catalog_prompts.json');
+                const res = await fetch(url);
+                if (res.ok) {
+                    _PHS.catalogPrompts = await res.json();
+                    await StorageManager.saveCatalogPrompts(_PHS.catalogPrompts);
+                }
+            } catch (e) { console.warn('[GPH] 加载内置提示词目录失败'); }
+        }
     };
 
     /* --- 渲染主界面 --- */
@@ -102,9 +106,7 @@ var PanelUI = (() => {
         const tabsHTML = TabManager.renderTabs(roles);
 
         let contentHTML = '';
-        if (currentTab === 'general') {
-            contentHTML = TabManager.renderGeneralPanel(_PHS.generalPrompts);
-        } else if (currentTab === 'catalog') {
+        if (currentTab === 'catalog') {
             contentHTML = TabManager.renderCatalogPanel(_PHS.catalogPrompts);
         } else {
             contentHTML = _renderFrameworkContent(roleIndex);
@@ -182,11 +184,6 @@ var PanelUI = (() => {
         if (combineBtn) {
             combineBtn.style.display = (isFramework && !hasNoFrameworks) ? '' : 'none';
         }
-
-        const manageGenBtn = _PHS.panelEl.querySelector('#gph-manage-general-btn');
-        if (manageGenBtn) {
-            manageGenBtn.style.display = (tab === 'general') ? '' : 'none';
-        }
     };
 
     /* --- 更新框架选择器 --- */
@@ -215,11 +212,12 @@ var PanelUI = (() => {
             if (target.id === 'gph-new-framework-btn') { PanelFrameworkHandlers.handleGenerate(); }
             else if (target.id === 'gph-paste-json-btn') { PanelFrameworkHandlers.handlePasteJSON(); }
             else if (target.id === 'gph-manage-framework-btn') { PanelFrameworkHandlers.handleManageFrameworks(); }
-            else if (target.id === 'gph-manage-general-btn') { PanelActionHandlers.handleManageGeneral(); }
             else if (target.id === 'gph-combine-send-btn') { PanelActionHandlers.handleCombineSend(_PHS.bodyEl); }
             else if (target.id === 'gph-auto-continue-btn') { PanelActionHandlers.handleAutoContinue(_PHS.panelEl); }
-            else if (target.classList.contains('gph-general-prompt-btn')) { PanelActionHandlers.handleGeneralPromptClick(target); }
             else if (target.classList.contains('gph-catalog-use-btn')) { PanelActionHandlers.handleCatalogUse(target); }
+            else if (target.classList.contains('gph-catalog-edit-btn')) { PanelActionHandlers.handleCatalogEdit(target); }
+            else if (target.classList.contains('gph-catalog-del-btn')) { PanelActionHandlers.handleCatalogDelete(target); }
+            else if (target.id === 'gph-catalog-add-btn') { PanelActionHandlers.handleCatalogAdd(); }
         });
 
         _PHS.selectorEl.addEventListener('change', (e) => {

@@ -431,7 +431,18 @@
     gap: 10px;
 }
 
-/* --- 提示词目录 --- */
+.gph-catalog-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gph-catalog-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+
 .gph-catalog-list {
     display: flex;
     flex-direction: column;
@@ -461,6 +472,11 @@
     font-weight: 600;
     color: var(--text-primary);
     font-size: 13px;
+}
+
+.gph-catalog-actions {
+    display: flex;
+    gap: 6px;
 }
 
 .gph-catalog-preview {

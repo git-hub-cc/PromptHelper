@@ -48,6 +48,7 @@
                 "ui/panel-actions.js",
                 "ui/toolbar-inject.js",
                 "ui/code-block-header.js",
+                "ui/sidebar-optimizer.js",
                 "content.js"
             ],
             "css": [

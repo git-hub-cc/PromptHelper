@@ -19,7 +19,9 @@ var PlatformAdapter = (() => {
             selector: 'rich-textarea .ql-editor[contenteditable="true"]',
             sendButtonSelector: 'button.send-button.submit',
             stoppableSelector: 'button.send-button.stop',
-            scrollContainerSelector: 'ms-autoscroll-container'
+            scrollContainerSelector: 'ms-autoscroll-container',
+            sidebarItemSelector: 'a[data-test-id="conversation"]',
+            userMessageSelector: '.query-content, .user-query'
         },
         {
             name: 'ChatGPT',
