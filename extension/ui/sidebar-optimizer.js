@@ -143,9 +143,26 @@ var SidebarOptimizer = (() => {
             if (!convId) return;
 
             const parent = item.closest('.conversation-items-container') || item.parentElement;
-            if (parent.querySelector('.gph-conv-optimizer')) return;
+            
+            // 1. 确保消息列表容器存在 (始终首先检查/创建容器，供按钮绑定使用)
+            let container = parent.querySelector('.gph-conv-optimizer');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'gph-conv-optimizer';
+                
+                const msgList = document.createElement('div');
+                msgList.className = 'gph-msg-list';
 
-            // 1. 查找或创建操作容器
+                container.appendChild(msgList);
+                parent.appendChild(container);
+
+                // 渲染已存储的消息
+                if (history[convId]) {
+                    _renderMessageList(msgList, history[convId]);
+                }
+            }
+
+            // 2. 查找或创建操作按钮容器中的折叠按钮
             const actionsContainer = parent.querySelector('.conversation-actions-container');
             if (actionsContainer && !actionsContainer.querySelector('.gph-conv-toggle-btn')) {
                 const btn = document.createElement('button');
@@ -153,10 +170,12 @@ var SidebarOptimizer = (() => {
                 btn.setAttribute('aria-label', '展开历史消息');
                 btn.innerHTML = '<span class="gph-icon">expand_more</span>';
                 
+                // 闭包引用正确的 container
+                const targetContainer = container;
                 btn.onclick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const state = container.classList.toggle('gph-conv-item-expanded');
+                    const state = targetContainer.classList.toggle('gph-conv-item-expanded');
                     btn.classList.toggle('gph-expanded', state);
                 };
                 
@@ -167,21 +186,6 @@ var SidebarOptimizer = (() => {
                 } else {
                     actionsContainer.appendChild(btn);
                 }
-            }
-
-            // 2. 创建消息列表容器
-            const container = document.createElement('div');
-            container.className = 'gph-conv-optimizer';
-            
-            const msgList = document.createElement('div');
-            msgList.className = 'gph-msg-list';
-
-            container.appendChild(msgList);
-            parent.appendChild(container);
-
-            // 渲染已存储的消息
-            if (history[convId]) {
-                _renderMessageList(msgList, history[convId]);
             }
         });
     };
@@ -269,7 +273,11 @@ var SidebarOptimizer = (() => {
             return;
         }
 
-        const currentMessages = Array.from(userQueries).map(el => el.innerText.trim()).filter(t => t);
+        const currentMessages = Array.from(userQueries).map(el => {
+            let text = el.innerText.trim();
+            // 批量替换连续换行为单换行
+            return text.replace(/\n+/g, '\n');
+        }).filter(t => t);
         
         const history = await _getHistory();
         const oldMessages = history[convId] || [];

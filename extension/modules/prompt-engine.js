@@ -56,7 +56,7 @@ var PromptEngine = (() => {
         /* --- 核心指令 --- */
         const directives = checkedDirectiveIndices.map(i => role.directives[i]).filter(Boolean);
         if (directives.length > 0) {
-            parts.push(`\n## 核心指令：\n- ${directives.join('\n- ')}`);
+            parts.push(`# 核心指令：\n- ${directives.join('\n- ')}`);
         }
 
         /* --- 个性化指令 --- */
@@ -67,12 +67,12 @@ var PromptEngine = (() => {
             .filter(Boolean);
 
         if (personalDirectives.length > 0) {
-            parts.push(`\n## 个性化指令：\n- ${personalDirectives.join('\n- ')}`);
+            parts.push(`# 个性化指令：\n- ${personalDirectives.join('\n- ')}`);
         }
 
         /* --- 用户任务内容 --- */
         if (userContent && userContent.trim()) {
-            parts.push(`\n## 任务内容：\n${userContent}`);
+            parts.push(`# 任务内容：\n${userContent}`);
         }
 
         /* --- 多维度考量 --- */
@@ -81,11 +81,11 @@ var PromptEngine = (() => {
             .filter(Boolean);
 
         if (considerations.length > 0) {
-            parts.push(`\n## 输出要求：\n请在你的回答中，必须包含对以下维度的深入分析：\n- ${considerations.join('\n- ')}`);
+            parts.push(`# 输出要求：\n请在你的回答中，必须包含对以下维度的深入分析：\n- ${considerations.join('\n- ')}`);
         }
 
         /* --- 时效性与自我修正 --- */
-        parts.push(`\n---\n${role.timeliness}\n\n${role.selfCorrection.join('\n')}`);
+        parts.push(`---\n${role.timeliness}\n\n${role.selfCorrection.join('\n')}`);
 
         return parts.join('\n\n');
     };
