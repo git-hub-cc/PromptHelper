@@ -69,7 +69,7 @@ class SidebarOptimizer {
                 const btn = document.createElement('button');
                 btn.className = 'gph-conv-toggle-btn';
                 btn.setAttribute('aria-label', '展开历史消息');
-                btn.innerHTML = '<span class="gph-icon">expand_more</span>';
+                btn.innerHTML = '<span class="gph-icon">unfold_more</span>';
 
                 // 闭包引用正确的 container
                 const targetContainer = container;
@@ -79,7 +79,15 @@ class SidebarOptimizer {
 
                     // 切换 UI 状态
                     const state = targetContainer.classList.toggle('gph-conv-item-expanded');
-                    btn.classList.toggle('gph-expanded', state);
+                    
+                    const iconSpan = btn.querySelector('.gph-icon');
+                    if (state) {
+                        iconSpan.textContent = 'unfold_less';
+                        btn.setAttribute('aria-label', '折叠历史消息');
+                    } else {
+                        iconSpan.textContent = 'unfold_more';
+                        btn.setAttribute('aria-label', '展开历史消息');
+                    }
 
                     // --- 修复点：展开时动态检查并尝试获取数据 ---
                     if (state) {

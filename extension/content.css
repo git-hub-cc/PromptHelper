@@ -100,14 +100,9 @@ code-block:not(.gph-code-collapsed) {
     background-color: var(--mat-app-ripple-color, rgba(255,255,255,0.05));
 }
 
-.gph-conv-toggle-btn.gph-expanded .gph-icon {
-    transform: rotate(180deg);
-}
-
 .gph-icon {
     font-family: 'Google Symbols';
     font-size: 20px;
-    transition: transform 0.2s;
     user-select: none;
 }
 
