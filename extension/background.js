@@ -3,7 +3,6 @@
  * 处理插件图标点击、首次安装事件
  */
 
-
 /* --- 首次安装事件 --- */
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {

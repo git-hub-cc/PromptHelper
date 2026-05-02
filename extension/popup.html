@@ -4,32 +4,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PromptHelper</title>
+    <title>Gemini 增强助手</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 
 <body>
     <div class="popup-container">
         <div class="popup-header">
-            <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width='64' height='64' viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <style>
+                    .bg { fill: url(#logo-gradient); }
+                    .grad-stop-1 { stop-color: #007ACC; }
+                    .grad-stop-2 { stop-color: #009688; }
+                    .icon-fill { fill: white; fill-opacity: 0.9; }
+
+                    @media (prefers-color-scheme: dark) {
+                        .bg { fill: transparent; }
+
+                        .grad-stop-1, .grad-stop-2 { stop-color: transparent; }
+
+                        .icon-fill { fill: #D1D5DB; fill-opacity: 1; }
+                    }
+                </style>
+
                 <defs>
-                    <linearGradient id="plg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#007ACC" />
-                        <stop offset="1" stop-color="#009688" />
+                    <linearGradient id='logo-gradient' x1='0' y1='0' x2='64' y2='64' gradientUnits='userSpaceOnUse'>
+                        <stop class='grad-stop-1' offset="0"/>
+                        <stop offset='1' class='grad-stop-2'/>
                     </linearGradient>
                 </defs>
-                <rect width="64" height="64" rx="12" fill="url(#plg)" />
-                <g fill="white" fill-opacity="0.9">
-                    <rect x="30" y="38" width="4" height="8" rx="2" />
-                    <rect x="22.5" y="27" width="8" height="4" rx="2" transform="rotate(-60 26.5 29)" />
-                    <rect x="33.5" y="27" width="8" height="4" rx="2" transform="rotate(60 37.5 29)" />
-                    <circle cx="32" cy="50" r="6" />
-                    <circle cx="18" cy="26" r="6" />
-                    <circle cx="46" cy="26" r="6" />
-                    <path d="M32 28 L37.2 31 L37.2 37 L32 40 L26.8 37 L26.8 31 Z" />
-                </g>
+
+                <rect width='64' height='64' rx='12' class='bg'/>
+                <path d='M32 14 C32 23.941 23.941 32 14 32 C23.941 32 32 40.059 32 50 C32 40.059 40.059 32 50 32 C40.059 32 32 23.941 32 14 Z' class='icon-fill'/>
+                <path d='M48 14 C48 18.5 44.5 22 40 22 C44.5 22 48 25.5 48 30 C48 25.5 51.5 22 56 22 C51.5 22 48 18.5 48 14 Z' class='icon-fill'/>
             </svg>
-            <h1>PromptHelper</h1>
+            <h1>Gemini 增强助手</h1>
         </div>
 
         <div class="popup-body">
@@ -37,23 +46,17 @@
                 <span class="status-dot"></span>
                 <span id="status-text">检测中...</span>
             </div>
-
-            <div class="popup-stats">
-                <div class="stat-item">
-                    <span class="stat-value" id="stat-frameworks">-</span>
-                    <span class="stat-label">框架</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value" id="stat-prompts">-</span>
-                    <span class="stat-label">通用指令</span>
-                </div>
-            </div>
-
+            
+            <p style="font-size: 12px; color: #a0a4ab; margin-bottom: 10px; line-height: 1.5;">
+                ✨ 已启用功能：<br>
+                1. 侧边栏历史对话快速定位<br>
+                2. 生成代码块自动折叠
+            </p>
         </div>
 
         <div class="popup-footer">
             <span>v1.0.0</span>
-            <span>支持 Gemini</span>
+            <span>仅支持 Gemini</span>
         </div>
     </div>
     <script src="popup.js"></script>

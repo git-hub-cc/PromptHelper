@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "PromptHelper - AI 多角色框架助手",
+    "name": "Gemini 增强助手 - 代码折叠与侧边栏优化",
     "version": "1.0.0",
-    "description": "AI 多角色提示词框架助手，支持 Gemini、ChatGPT、DeepSeek、AIStudio 等平台",
+    "description": "专注提供 Gemini 侧边栏历史对话快速定位与代码块自动折叠功能",
     "icons": {
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
@@ -21,10 +21,7 @@
         "scripting"
     ],
     "host_permissions": [
-        "https://aistudio.google.com/*",
-        "https://gemini.google.com/*",
-        "https://chatgpt.com/*",
-        "https://chat.deepseek.com/*"
+        "https://gemini.google.com/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -32,21 +29,10 @@
     "content_scripts": [
         {
             "matches": [
-                "https://aistudio.google.com/*",
-                "https://gemini.google.com/*",
-                "https://chatgpt.com/*",
-                "https://chat.deepseek.com/*"
+                "https://gemini.google.com/*"
             ],
             "js": [
-                "modules/storage.js",
                 "modules/platform.js",
-                "modules/modal.js",
-                "modules/prompt-engine.js",
-                "ui/tabs.js",
-                "ui/panel.js",
-                "ui/panel-framework.js",
-                "ui/panel-actions.js",
-                "ui/toolbar-inject.js",
                 "ui/code-block-header.js",
                 "ui/sidebar-optimizer.js",
                 "content.js"
@@ -55,17 +41,6 @@
                 "content.css"
             ],
             "run_at": "document_idle"
-        }
-    ],
-    "web_accessible_resources": [
-        {
-            "resources": [
-                "prompts/*",
-                "icons/*"
-            ],
-            "matches": [
-                "<all_urls>"
-            ]
         }
     ]
 }

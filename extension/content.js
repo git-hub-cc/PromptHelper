@@ -1,58 +1,23 @@
 /**
  * Content Script - 内容脚本主入口
- * 初始化各模块，接收 background.js 消息，管理面板生命周期
+ * 仅保留 Gemini 侧边栏优化和代码块折叠的初始化逻辑
  */
 (async function main() {
     'use strict';
 
-    /* --- 防止重复注入 --- */
-    if (document.getElementById('gph-ext-panel')) {
-        console.log('[GPH] 面板已存在，跳过初始化');
-        return;
-    }
-
-    /* --- Gemini 平台工具栏按钮（基于 hostname，早期注入，无需等待面板） --- */
     if (window.location.hostname.includes('gemini.google.com')) {
-        ToolbarInjector.init();
-        CodeBlockFolder.init();
-        SidebarOptimizer.init();
-    }
+        // 等待平台检测并完成初始化，使用 ES6 Class 实例化
+        const platformAdapter = new PlatformAdapter();
+        const platform = platformAdapter.detect();
 
-    /* --- 检测当前平台 --- */
-    const platform = PlatformAdapter.detect();
-    if (!platform) {
-        console.log('[GPH] 未检测到支持的 AI 平台（输入框未就绪）');
-        return;
-    }
-    console.log(`[GPH] 已检测到平台: ${platform.name}`);
+        if (platform) {
+            const codeBlockFolder = new CodeBlockFolder();
+            codeBlockFolder.init();
 
-    /* --- 初始化存储（首次安装导入默认数据 / 迁移旧数据） --- */
-    const catalogUrl = chrome.runtime.getURL('prompts/catalog_prompts.json');
-    await StorageManager.initDefaults(catalogUrl);
-
-    /* --- 加载元提示词模板 --- */
-    await PromptEngine.loadMetaTemplate();
-
-    /* --- 创建面板 --- */
-    PanelUI.createPanel(platform.name);
-
-    /* --- 加载数据并渲染 --- */
-    await PanelUI.loadData();
-    PanelUI.render();
-
-    /* --- 监听 storage 变化以同步 UI --- */
-    StorageManager.onChange(async (changes, area) => {
-        if (area === 'sync') {
-            const keysOfInterest = [StorageManager.KEYS.FRAMEWORKS, StorageManager.KEYS.CATALOG_PROMPTS];
-            const hasRelevantChange = Object.keys(changes).some(k => keysOfInterest.includes(k));
-            if (hasRelevantChange) {
-                await PanelUI.loadData();
-                PanelUI.render();
-                console.log('[GPH] 存储变化已同步到 UI');
-            }
+            const sidebarOptimizer = new SidebarOptimizer(platformAdapter);
+            sidebarOptimizer.init();
         }
-    });
+    }
 
-
-    console.log('[GPH] PromptHelper 插件初始化完成');
+    console.log('[GPH] 极简增强辅助插件初始化完成');
 })();
