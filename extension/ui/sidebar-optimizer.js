@@ -73,11 +73,35 @@ class SidebarOptimizer {
 
                 // 闭包引用正确的 container
                 const targetContainer = container;
-                btn.onclick = (e) => {
+                btn.onclick = async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+
+                    // 切换 UI 状态
                     const state = targetContainer.classList.toggle('gph-conv-item-expanded');
                     btn.classList.toggle('gph-expanded', state);
+
+                    // --- 修复点：展开时动态检查并尝试获取数据 ---
+                    if (state) {
+                        const msgList = targetContainer.querySelector('.gph-msg-list');
+                        const currentConvId = this._extractConvId(window.location.href);
+                        const history = await this._getHistory();
+                        const messages = history[convId] || [];
+
+                        if (messages.length === 0) {
+                            if (currentConvId === convId) {
+                                // 场景 1：是当前正在浏览的对话，直接强制立即捕获
+                                msgList.innerHTML = '<div class="gph-msg-item" style="color:#a0a4ab; text-align:center; pointer-events:none;">正在获取内容...</div>';
+                                await this._captureCurrentMessages();
+                            } else {
+                                // 场景 2：是其他历史对话且无缓存，必须提示用户点击进入
+                                msgList.innerHTML = '<div class="gph-msg-item" style="color:#a0a4ab; text-align:center; pointer-events:none; font-style:italic;">暂无缓存记录，请先点击标题加载该对话</div>';
+                            }
+                        } else {
+                            // 场景 3：本地已有数据，重新渲染一次保证是最新的
+                            this._renderMessageList(msgList, messages);
+                        }
+                    }
                 };
 
                 // 插入到三点菜单按钮左侧
